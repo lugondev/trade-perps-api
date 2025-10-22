@@ -87,6 +87,43 @@ export class TradingService {
 	}
 
 	/**
+	 * Place multiple orders in one request (Batch Orders endpoint)
+	 * Maximum 5 orders per batch
+	 */
+	async batchOrders(orders: OrderRequest[]): Promise<AsterApiResponse<Order[]>> {
+		try {
+			if (orders.length === 0) {
+				return { success: false, error: 'No orders provided', timestamp: Date.now() };
+			}
+			if (orders.length > 5) {
+				return { success: false, error: 'Maximum 5 orders allowed per batch', timestamp: Date.now() };
+			}
+			this.logger.debug(`Placing batch of ${orders.length} orders`);
+			const batchList = orders.map(order => {
+				const orderParams: any = { symbol: order.symbol, side: order.side, type: order.type };
+				if (order.quantity) orderParams.quantity = order.quantity;
+				if (order.price) orderParams.price = order.price;
+				if (order.newClientOrderId) orderParams.newClientOrderId = order.newClientOrderId;
+				if (order.stopPrice) orderParams.stopPrice = order.stopPrice;
+				if (order.closePosition) orderParams.closePosition = order.closePosition;
+				if (order.timeInForce) orderParams.timeInForce = order.timeInForce;
+				if (order.workingType) orderParams.workingType = order.workingType;
+				if (order.priceProtect) orderParams.priceProtect = order.priceProtect;
+				if (order.reduceOnly) orderParams.reduceOnly = order.reduceOnly;
+				if (order.positionSide) orderParams.positionSide = order.positionSide;
+				return orderParams;
+			});
+			const params = { batchOrders: JSON.stringify(batchList), timestamp: Date.now(), recvWindow: 50000 };
+			const response = await this.asterApiService.hmacPost<Order[]>('/fapi/v1/batchOrders', params);
+			if (response.success) { this.logger.log(`Batch orders placed: ${orders.length}`); }
+			return response;
+		} catch (error) {
+			this.logger.error('Error placing batch orders:', error);
+			return { success: false, error: error.message || 'Failed to place batch orders', timestamp: Date.now() };
+		}
+	}
+
+	/**
 	 * Cancel an existing order (Cancel Order TRADE endpoint)
 	 * Uses /fapi/v1/order with HMAC SHA256
 	 */
@@ -525,55 +562,49 @@ export class TradingService {
 
 			this.logger.debug(`SL Price: ${stopLossPrice}, TP Price: ${takeProfitPrice}`);
 
-			// Place stop loss order (close all position when triggered)
-			const stopLossRequest: OrderRequest = {
+		// Use batch orders to place SL and TP in one request (optimized - 2 requests → 1)
+		const slTpOrders: OrderRequest[] = [
+			{
 				symbol,
 				side: 'SELL',
 				type: 'STOP_MARKET',
 				stopPrice: stopLossPrice,
-				closePosition: 'true', // Close all LONG position when triggered
+				closePosition: 'true',
 				workingType: 'CONTRACT_PRICE',
 				newClientOrderId: this.generateClientOrderId(),
-			};
-
-			const stopLossOrder = await this.placeOrder(stopLossRequest);
-
-			if (!stopLossOrder.success) {
-				this.logger.error('❌ FAILED to place STOP LOSS order:', stopLossOrder.error);
-				this.logger.error('SL Request:', JSON.stringify(stopLossRequest));
-			} else {
-				this.logger.log('✅ STOP LOSS order placed:', stopLossOrder.data?.orderId);
-			}
-
-			// Place take profit order (close all position when triggered)
-			const takeProfitRequest: OrderRequest = {
+			},
+			{
 				symbol,
 				side: 'SELL',
 				type: 'TAKE_PROFIT_MARKET',
 				stopPrice: takeProfitPrice,
-				closePosition: 'true', // Close all LONG position when triggered
+				closePosition: 'true',
 				workingType: 'CONTRACT_PRICE',
 				newClientOrderId: this.generateClientOrderId(),
-			};
+			},
+		];
 
-			const takeProfitOrder = await this.placeOrder(takeProfitRequest);
+		const batchResult = await this.batchOrders(slTpOrders);
+		let stopLossOrder, takeProfitOrder;
+		if (batchResult.success && batchResult.data) {
+			stopLossOrder = { success: true, data: batchResult.data[0], timestamp: Date.now() };
+			takeProfitOrder = { success: true, data: batchResult.data[1], timestamp: Date.now() };
+			this.logger.log('✅ Batch orders (SL + TP) placed successfully');
+		} else {
+			this.logger.error('❌ Batch orders failed:', batchResult.error);
+			stopLossOrder = { success: false, error: batchResult.error, timestamp: Date.now() };
+			takeProfitOrder = { success: false, error: batchResult.error, timestamp: Date.now() };
+		}
 
-			if (!takeProfitOrder.success) {
-				this.logger.error('❌ FAILED to place TAKE PROFIT order:', takeProfitOrder.error);
-				this.logger.error('TP Request:', JSON.stringify(takeProfitRequest));
-			} else {
-				this.logger.log('✅ TAKE PROFIT order placed:', takeProfitOrder.data?.orderId);
-			}
-
-			return {
-				success: true,
-				data: {
-					mainOrder: mainOrder.data,
-					stopLoss: stopLossOrder.success ? stopLossOrder.data : undefined,
-					takeProfit: takeProfitOrder.success ? takeProfitOrder.data : undefined,
-				},
-				timestamp: Date.now(),
-			};
+		return {
+			success: true,
+			data: {
+				mainOrder: mainOrder.data,
+				stopLoss: stopLossOrder.success ? stopLossOrder.data : undefined,
+				takeProfit: takeProfitOrder.success ? takeProfitOrder.data : undefined,
+			},
+			timestamp: Date.now(),
+		};
 		} catch (error) {
 			this.logger.error('Error in quick long:', error);
 			return {
@@ -687,33 +718,40 @@ export class TradingService {
 				newClientOrderId: this.generateClientOrderId(),
 			};
 
-			const stopLossOrder = await this.placeOrder(stopLossRequest);
+			// Use batch orders to place STOP LOSS and TAKE PROFIT in one request
+			const slTpOrders: OrderRequest[] = [
+				{
+					symbol,
+					side: 'BUY', // SHORT position needs BUY to close
+					type: 'STOP_MARKET',
+					stopPrice: stopLossPrice,
+					closePosition: 'true', // Close all SHORT position when triggered
+					workingType: 'CONTRACT_PRICE',
+					newClientOrderId: this.generateClientOrderId(),
+				},
+				{
+					symbol,
+					side: 'BUY', // SHORT position needs BUY to close
+					type: 'TAKE_PROFIT_MARKET',
+					stopPrice: takeProfitPrice,
+					closePosition: 'true', // Close all SHORT position when triggered
+					workingType: 'CONTRACT_PRICE',
+					newClientOrderId: this.generateClientOrderId(),
+				},
+			];
 
-			if (!stopLossOrder.success) {
-				this.logger.error('❌ FAILED to place STOP LOSS order:', stopLossOrder.error);
-				this.logger.error('SL Request:', JSON.stringify(stopLossRequest));
+			const batchResult = await this.batchOrders(slTpOrders);
+
+			let stopLossOrder: AsterApiResponse<any> = { success: false, timestamp: Date.now() };
+			let takeProfitOrder: AsterApiResponse<any> = { success: false, timestamp: Date.now() };
+
+			if (batchResult.success && Array.isArray(batchResult.data)) {
+				stopLossOrder = { success: true, data: batchResult.data[0], timestamp: Date.now() };
+				takeProfitOrder = { success: true, data: batchResult.data[1], timestamp: Date.now() };
+				this.logger.log('✅ STOP LOSS & TAKE PROFIT orders placed (batch):', 
+stopLossOrder.data?.orderId, takeProfitOrder.data?.orderId);
 			} else {
-				this.logger.log('✅ STOP LOSS order placed:', stopLossOrder.data?.orderId);
-			}
-
-			// Place take profit order (close all position when triggered)
-			const takeProfitRequest: OrderRequest = {
-				symbol,
-				side: 'BUY',
-				type: 'TAKE_PROFIT_MARKET',
-				stopPrice: takeProfitPrice,
-				closePosition: 'true', // Close all SHORT position when triggered
-				workingType: 'CONTRACT_PRICE',
-				newClientOrderId: this.generateClientOrderId(),
-			};
-
-			const takeProfitOrder = await this.placeOrder(takeProfitRequest);
-
-			if (!takeProfitOrder.success) {
-				this.logger.error('❌ FAILED to place TAKE PROFIT order:', takeProfitOrder.error);
-				this.logger.error('TP Request:', JSON.stringify(takeProfitRequest));
-			} else {
-				this.logger.log('✅ TAKE PROFIT order placed:', takeProfitOrder.data?.orderId);
+				this.logger.error('❌ FAILED to place SL/TP batch orders:', batchResult.error);
 			}
 
 			return {
