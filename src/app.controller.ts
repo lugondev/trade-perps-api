@@ -1,9 +1,11 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { AppService } from './app.service';
+import { Public } from './common/decorators/public.decorator';
 
 @ApiTags('health')
 @Controller()
+@Public() // Make all routes in this controller public (no API key required)
 export class AppController {
 	constructor(private readonly appService: AppService) { }
 

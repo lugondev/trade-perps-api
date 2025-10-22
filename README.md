@@ -34,15 +34,26 @@ Update the `.env` file with your Aster DEX API credentials:
 ASTER_API_KEY=your_api_key_here
 ASTER_API_SECRET=your_api_secret_here
 
-# API URLs (update with actual Aster endpoints)
-ASTER_REST_URL=https://api.asterdex.com
-ASTER_WS_URL=wss://ws.asterdex.com
+# Wallet Addresses
+ASTER_USER_ADDRESS=your_main_wallet_address
+ASTER_SIGNER_ADDRESS=your_signer_wallet_address
+ASTER_PRIVATE_KEY=your_private_key_here
+
+# API URLs
+ASTER_REST_URL=https://fapi.asterdex.com
+ASTER_WS_URL=wss://fstream.asterdex.com
 
 # Application settings
 NODE_ENV=development
 PORT=3000
 LOG_LEVEL=debug
+
+# API Access Control (IMPORTANT!)
+# This key is required to access protected /aster endpoints
+API_KEY_ACCESS=your_secure_api_key_here
 ```
+
+**Security Note:** The `API_KEY_ACCESS` is required in the `X-API-Key` header for all requests to `/aster/*` endpoints. See [API Key Authentication](.docs/api-key-authentication.md) for details.
 
 ### 3. Start the Application
 
@@ -56,10 +67,50 @@ pnpm start:prod
 ```
 
 The application will be available at:
-- **API**: http://localhost:3000
-- **Swagger Documentation**: http://localhost:3000/api
+
+- **API**: <http://localhost:3000>
+- **Swagger Documentation**: <http://localhost:3000/api>
+
+## Authentication
+
+All endpoints under `/aster/*` are protected with API key authentication.
+
+**Required Header:**
+
+```http
+X-API-Key: your_api_key_access_here
+```
+
+### Using Swagger UI
+
+Swagger UI has built-in API key authentication:
+
+1. Open <http://localhost:3000/api>
+2. Click the **"Authorize"** button (lock icon)
+3. Enter your API key from `.env` file
+4. Click **"Authorize"** and **"Close"**
+5. Now you can test all protected endpoints
+
+For detailed Swagger guide, see:
+
+- [English Guide](.docs/swagger-authentication-guide-en.md)
+- [Vietnamese Guide](.docs/swagger-authentication-guide-vi.md)
+
+### Using curl
+
+**Example with curl:**
+
+```bash
+curl -H "X-API-Key: your_api_key_access_here" http://localhost:3000/aster/balance
+```
+
+### Using Code
+
+For detailed authentication documentation and code examples, see [API Key Authentication](.docs/api-key-authentication.md).
 
 ## API Endpoints
+
+**Note:** All endpoints below require the `X-API-Key` header.
 
 ### Balance Endpoints
 

@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import { ethers } from 'ethers';
 import { AsterApiCredentials, AsterApiResponse, AsterSignatureParams } from '../types';
+import { AsterConfig } from '../../config';
 
 @Injectable()
 export class AsterApiService {
@@ -10,16 +11,23 @@ export class AsterApiService {
 	private readonly httpClient: AxiosInstance;
 	private readonly credentials: AsterApiCredentials;
 	private readonly baseURL: string;
+	private readonly asterConfig: AsterConfig;
 
 	constructor(private configService: ConfigService) {
-		this.baseURL = this.configService.get<string>('ASTER_REST_URL') || 'https://fapi.asterdex.com';
+		// Load Aster configuration
+		this.asterConfig = this.configService.get<AsterConfig>('aster') as AsterConfig;
+
+		this.baseURL = this.asterConfig.restUrl;
 		this.credentials = {
-			apiKey: this.configService.get<string>('ASTER_API_KEY'),
-			apiSecret: this.configService.get<string>('ASTER_API_SECRET'),
-			user: this.configService.get<string>('ASTER_USER_ADDRESS'), // Main account wallet address
-			signer: this.configService.get<string>('ASTER_SIGNER_ADDRESS'), // API wallet address
-			privateKey: this.configService.get<string>('ASTER_PRIVATE_KEY'), // Private key for signing
+			apiKey: this.asterConfig.apiKey,
+			apiSecret: this.asterConfig.apiSecret,
+			user: this.asterConfig.userAddress, // Main account wallet address
+			signer: this.asterConfig.signerAddress, // API wallet address
+			privateKey: this.asterConfig.privateKey, // Private key for signing
 		};
+
+		// Validate credentials
+		this.validateCredentials();
 
 		this.httpClient = axios.create({
 			baseURL: this.baseURL,
@@ -32,6 +40,29 @@ export class AsterApiService {
 
 		this.setupInterceptors();
 		this.logger.log(`Aster API Service initialized with base URL: ${this.baseURL}`);
+	}
+
+	/**
+	 * Validate API credentials on initialization
+	 */
+	private validateCredentials(): void {
+		const requiredFields: (keyof AsterApiCredentials)[] = [
+			'apiKey',
+			'apiSecret',
+			'user',
+			'signer',
+			'privateKey',
+		];
+
+		const missingFields = requiredFields.filter((field) => !this.credentials[field]);
+
+		if (missingFields.length > 0) {
+			this.logger.warn(
+				`⚠️  Missing API credentials: ${missingFields.join(', ')}. Some API operations may fail.`,
+			);
+		} else {
+			this.logger.log('✅ All API credentials configured successfully');
+		}
 	}
 
 	/**

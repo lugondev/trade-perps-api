@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import * as WebSocket from 'ws';
 import { Subject, Observable } from 'rxjs';
 import { WebSocketMessage, TickerData, OrderBookData } from '../types';
+import { AsterConfig } from '../../config';
 
 @Injectable()
 export class AsterWebSocketService implements OnModuleDestroy {
@@ -16,9 +17,13 @@ export class AsterWebSocketService implements OnModuleDestroy {
 	private pingInterval: NodeJS.Timeout | null = null;
 	private isConnected = false;
 	private subscriptions: Set<string> = new Set();
+	private readonly asterConfig: AsterConfig;
 
 	constructor(private configService: ConfigService) {
-		this.wsUrl = this.configService.get<string>('ASTER_WS_URL') || 'wss://fstream.asterdex.com/ws/';
+		// Load Aster configuration
+		this.asterConfig = this.configService.get<AsterConfig>('aster') as AsterConfig;
+		this.wsUrl = this.asterConfig.wsUrl;
+		this.logger.log(`WebSocket URL configured: ${this.wsUrl}`);
 	}
 
 	/**

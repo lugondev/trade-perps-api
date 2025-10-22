@@ -7,8 +7,10 @@ import { AsterWebSocketService } from '../services/aster-websocket.service';
 import { AsterApiService } from '../services/aster-api.service';
 import { MarketDataService } from '../services/market-data.service';
 import { OrderRequest } from '../types';
+import { ApiKeyAuth } from '../../common/decorators/api-key.decorator';
 
 @ApiTags('aster')
+@ApiKeyAuth()
 @Controller('aster')
 export class AsterController {
 	private readonly logger = new Logger(AsterController.name);

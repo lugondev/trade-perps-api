@@ -21,6 +21,9 @@ build/
 .env.production.local
 .env*.local
 
+# Cloud Run config (contains project-specific info)
+.cloudrun.env
+
 # Logs
 logs/
 *.log

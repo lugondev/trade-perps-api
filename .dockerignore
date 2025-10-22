@@ -1,0 +1,38 @@
+# Docker ignore patterns
+node_modules/
+npm-debug.log
+yarn-error.log
+pnpm-debug.log
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# Environment files (will be set via Cloud Run environment variables)
+.env
+.env.*
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Documentation
+README.md
+.docs/
+
+# Test files
+coverage/
+*.test.ts
+*.spec.ts
+test/
+
+# OS files
+.DS_Store
+Thumbs.db

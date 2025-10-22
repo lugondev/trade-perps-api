@@ -24,17 +24,31 @@ async function bootstrap() {
 		.setTitle('Aster DEX Trading Bot API')
 		.setDescription('NestJS API for Aster DEX trading operations')
 		.setVersion('1.0')
+		.addApiKey(
+			{
+				type: 'apiKey',
+				name: 'X-API-Key',
+				in: 'header',
+				description: 'API Key for accessing protected endpoints',
+			},
+			'api-key',
+		)
 		.addBearerAuth()
 		.build();
 
 	const document = SwaggerModule.createDocument(app, config);
-	SwaggerModule.setup('api', app, document);
+	SwaggerModule.setup('api', app, document, {
+		swaggerOptions: {
+			persistAuthorization: true, // Keep authorization after page refresh
+		},
+	});
 
 	const port = process.env.PORT || 3000;
 	await app.listen(port);
 
 	console.log(`🚀 Application is running on: http://localhost:${port}`);
 	console.log(`📚 Swagger docs available at: http://localhost:${port}/api`);
+	console.log(`🔐 API Key authentication required for /aster/* endpoints`);
 }
 
 bootstrap();

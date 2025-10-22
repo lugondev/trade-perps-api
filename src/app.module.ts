@@ -4,12 +4,14 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { AsterModule } from './aster/aster.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { appConfig, asterConfig, tradingConfig } from './config';
 
 @Module({
 	imports: [
 		ConfigModule.forRoot({
 			isGlobal: true,
 			envFilePath: '.env',
+			load: [appConfig, asterConfig, tradingConfig],
 		}),
 		ScheduleModule.forRoot(),
 		AsterModule,
