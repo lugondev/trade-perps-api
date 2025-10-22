@@ -188,7 +188,7 @@ export class TradingService {
 			this.logger.error('Error fetching open orders:', error);
 			return {
 				success: false,
-				error: error.message || 'Failed to fetch open orders',
+				error: error.data || error.message || 'Failed to fetch open orders',
 				timestamp: Date.now(),
 			};
 		}
@@ -316,19 +316,6 @@ export class TradingService {
 		} catch (error) {
 			return { isValid: false, error: 'Validation error: ' + error.message };
 		}
-	}
-
-	/**
-	 * Extract base asset from symbol (e.g., BTCUSDT -> USDT)
-	 */
-	private extractBaseAsset(symbol: string): string {
-		// This is a simplified extraction - adjust based on actual symbol format
-		if (symbol.endsWith('USDT')) return 'USDT';
-		if (symbol.endsWith('BTC')) return 'BTC';
-		if (symbol.endsWith('ETH')) return 'ETH';
-
-		// Default fallback
-		return 'USDT';
 	}
 
 	/**

@@ -96,38 +96,6 @@ export class HistoryService {
 	}
 
 	/**
-	 * Get all open orders (Current All Open Orders USER_DATA)
-	 * If the symbol is not sent, orders for all symbols will be returned in an array
-	 */
-	async getOpenOrders(symbol?: string): Promise<AsterApiResponse<Order[]>> {
-		try {
-			this.logger.debug(`Fetching open orders${symbol ? ` for ${symbol}` : ''}`);
-
-			const params: any = {
-				timestamp: Date.now(),
-				recvWindow: 50000,
-			};
-
-			if (symbol) params.symbol = symbol;
-
-			const response = await this.asterApiService.get<Order[]>('/fapi/v1/openOrders', params);
-
-			if (response.success && response.data) {
-				this.logger.log(`Successfully fetched ${response.data.length} open orders`);
-			}
-
-			return response;
-		} catch (error) {
-			this.logger.error('Error fetching open orders:', error);
-			return {
-				success: false,
-				error: error.message || 'Failed to fetch open orders',
-				timestamp: Date.now(),
-			};
-		}
-	}
-
-	/**
 	 * Get income history (Get Income History USER_DATA)
 	 * If neither startTime nor endTime is sent, the recent 7-day data will be returned
 	 * If incomeType is not sent, all kinds of flow will be returned

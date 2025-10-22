@@ -159,7 +159,7 @@ export class AsterController {
 	@ApiQuery({ name: 'symbol', required: false, description: 'Filter by trading symbol' })
 	@ApiResponse({ status: 200, description: 'Open orders retrieved successfully' })
 	async getOpenOrders(@Query('symbol') symbol?: string) {
-		return this.historyService.getOpenOrders(symbol);
+		return this.tradingService.getOpenOrders(symbol);
 	}
 
 	@Get('orders/all')

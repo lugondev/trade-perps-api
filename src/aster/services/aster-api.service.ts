@@ -305,9 +305,9 @@ export class AsterApiService {
 		// List of endpoints that definitely use HMAC SHA256 (to be confirmed by testing)
 		const hmacEndpoints = [
 			// Uncomment these if they work with HMAC:
-			// '/fapi/v1/order',
-			// '/fapi/v1/openOrders',
-			// '/fapi/v1/allOrders',
+			'/fapi/v1/order',
+			'/fapi/v1/openOrders',
+			'/fapi/v1/allOrders',
 		];
 
 		// For now, use Ethereum signature for ALL endpoints until we confirm HMAC works
