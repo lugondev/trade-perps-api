@@ -34,7 +34,7 @@ export class HistoryService {
 			if (endTime) params.endTime = endTime;
 			if (fromId) params.fromId = fromId;
 
-			const response = await this.asterApiService.get<Trade[]>('/fapi/v1/userTrades', params);
+			const response = await this.asterApiService.hmacGet<Trade[]>('/fapi/v1/userTrades', params);
 
 			if (response.success && response.data) {
 				this.logger.log(`Successfully fetched ${response.data.length} trades`);
@@ -78,7 +78,7 @@ export class HistoryService {
 			if (startTime) params.startTime = startTime;
 			if (endTime) params.endTime = endTime;
 
-			const response = await this.asterApiService.get<Order[]>('/fapi/v1/allOrders', params);
+			const response = await this.asterApiService.hmacGet<Order[]>('/fapi/v1/allOrders', params);
 
 			if (response.success && response.data) {
 				this.logger.log(`Successfully fetched ${response.data.length} orders`);
@@ -122,7 +122,7 @@ export class HistoryService {
 			if (startTime) params.startTime = startTime;
 			if (endTime) params.endTime = endTime;
 
-			const response = await this.asterApiService.get<any[]>('/fapi/v1/income', params);
+			const response = await this.asterApiService.hmacGet<any[]>('/fapi/v1/income', params);
 
 			if (response.success && response.data) {
 				this.logger.log(`Successfully fetched ${response.data.length} income records`);

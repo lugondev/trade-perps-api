@@ -98,26 +98,11 @@ export class AsterController {
 	}
 
 	@Get('positions')
-	@ApiOperation({ summary: 'Get position information v3' })
+	@ApiOperation({ summary: 'Get position information' })
 	@ApiQuery({ name: 'symbol', description: 'Trading symbol (optional)', required: false })
 	@ApiResponse({ status: 200, description: 'Position information retrieved successfully' })
 	async getPositions(@Query('symbol') symbol?: string) {
 		return this.balanceService.getPositionRisk(symbol);
-	}
-
-	@Get('trading/positions')
-	@ApiOperation({ summary: 'Get all positions (from trading service)' })
-	@ApiQuery({ name: 'symbol', description: 'Trading symbol (optional)', required: false })
-	@ApiResponse({ status: 200, description: 'Positions retrieved successfully' })
-	async getTradingPositions(@Query('symbol') symbol?: string) {
-		return this.tradingService.getPositions(symbol);
-	}
-
-	@Get('trading/account')
-	@ApiOperation({ summary: 'Get account info (from trading service)' })
-	@ApiResponse({ status: 200, description: 'Account info retrieved successfully' })
-	async getTradingAccount() {
-		return this.tradingService.getAccountInfo();
 	}
 
 	// Trading endpoints
@@ -409,47 +394,48 @@ export class AsterController {
 	// History endpoints
 	@Get('history/trades')
 	@ApiOperation({ summary: 'Get trade history' })
-	@ApiQuery({ name: 'symbol', required: false, description: 'Filter by trading symbol' })
-	@ApiQuery({ name: 'limit', required: false, description: 'Number of records (default: 100)' })
-	@ApiQuery({ name: 'page', required: false, description: 'Page number (default: 1)' })
+	@ApiQuery({ name: 'symbol', required: true, description: 'Trading symbol' })
 	@ApiQuery({ name: 'startTime', required: false, description: 'Start timestamp' })
 	@ApiQuery({ name: 'endTime', required: false, description: 'End timestamp' })
+	@ApiQuery({ name: 'fromId', required: false, description: 'Trade id to fetch from. Cannot be sent with startTime or endTime' })
+	@ApiQuery({ name: 'limit', required: false, description: 'Number of records (default: 500, max: 1000)' })
 	@ApiResponse({ status: 200, description: 'Trade history retrieved successfully' })
 	async getTradeHistory(
-		@Query('symbol') symbol?: string,
-		@Query('limit') limit: number = 100,
-		@Query('page') page: number = 1,
-		@Query('startTime') startTime?: number,
-		@Query('endTime') endTime?: number,
+		@Query('symbol') symbol: string,
+		@Query('startTime') startTime?: string,
+		@Query('endTime') endTime?: string,
+		@Query('fromId') fromId?: string,
+		@Query('limit') limit?: string,
 	) {
-		return this.historyService.getTradeHistory(symbol, limit, page, startTime, endTime);
+		const parsedStartTime = startTime ? parseInt(startTime) : undefined;
+		const parsedEndTime = endTime ? parseInt(endTime) : undefined;
+		const parsedFromId = fromId ? parseInt(fromId) : undefined;
+		const parsedLimit = limit ? parseInt(limit) : 500;
+
+		return this.historyService.getTradeHistory(symbol, parsedStartTime, parsedEndTime, parsedFromId, parsedLimit);
 	}
 
 	@Get('history/orders')
 	@ApiOperation({ summary: 'Get order history' })
-	@ApiQuery({ name: 'symbol', required: false, description: 'Filter by trading symbol' })
-	@ApiQuery({ name: 'limit', required: false, description: 'Number of records (default: 100)' })
-	@ApiQuery({ name: 'page', required: false, description: 'Page number (default: 1)' })
+	@ApiQuery({ name: 'symbol', required: true, description: 'Trading symbol' })
+	@ApiQuery({ name: 'orderId', required: false, description: 'Order id to fetch from. Cannot be sent with startTime or endTime' })
 	@ApiQuery({ name: 'startTime', required: false, description: 'Start timestamp' })
 	@ApiQuery({ name: 'endTime', required: false, description: 'End timestamp' })
+	@ApiQuery({ name: 'limit', required: false, description: 'Number of records (default: 500, max: 1000)' })
 	@ApiResponse({ status: 200, description: 'Order history retrieved successfully' })
 	async getOrderHistory(
-		@Query('symbol') symbol?: string,
-		@Query('limit') limit: number = 100,
-		@Query('page') page: number = 1,
-		@Query('startTime') startTime?: number,
-		@Query('endTime') endTime?: number,
+		@Query('symbol') symbol: string,
+		@Query('orderId') orderId?: string,
+		@Query('startTime') startTime?: string,
+		@Query('endTime') endTime?: string,
+		@Query('limit') limit?: string,
 	) {
-		return this.historyService.getOrderHistory(symbol, limit, page, startTime, endTime);
-	}
+		const parsedOrderId = orderId ? parseInt(orderId) : undefined;
+		const parsedStartTime = startTime ? parseInt(startTime) : undefined;
+		const parsedEndTime = endTime ? parseInt(endTime) : undefined;
+		const parsedLimit = limit ? parseInt(limit) : 500;
 
-	@Get('history/trades/:symbol/recent')
-	@ApiOperation({ summary: 'Get recent trades for symbol' })
-	@ApiParam({ name: 'symbol', description: 'Trading symbol' })
-	@ApiQuery({ name: 'limit', required: false, description: 'Number of records (default: 50)' })
-	@ApiResponse({ status: 200, description: 'Recent trades retrieved successfully' })
-	async getRecentTrades(@Param('symbol') symbol: string, @Query('limit') limit: number = 50) {
-		return this.historyService.getRecentTrades(symbol, limit);
+		return this.historyService.getOrderHistory(symbol, parsedOrderId, parsedStartTime, parsedEndTime, parsedLimit);
 	}
 
 	@Get('stats/:symbol')
@@ -457,8 +443,9 @@ export class AsterController {
 	@ApiParam({ name: 'symbol', description: 'Trading symbol' })
 	@ApiQuery({ name: 'days', required: false, description: 'Number of days (default: 30)' })
 	@ApiResponse({ status: 200, description: 'Trading statistics retrieved successfully' })
-	async getTradingStats(@Param('symbol') symbol: string, @Query('days') days: number = 30) {
-		return this.historyService.getTradingStats(symbol, days);
+	async getTradingStats(@Param('symbol') symbol: string, @Query('days') days?: string) {
+		const parsedDays = days ? parseInt(days) : 30;
+		return this.historyService.getTradingStats(symbol, parsedDays);
 	}
 
 	@Get('pnl')
@@ -466,8 +453,9 @@ export class AsterController {
 	@ApiQuery({ name: 'symbol', required: false, description: 'Filter by trading symbol' })
 	@ApiQuery({ name: 'days', required: false, description: 'Number of days (default: 30)' })
 	@ApiResponse({ status: 200, description: 'P&L report retrieved successfully' })
-	async getPnL(@Query('symbol') symbol?: string, @Query('days') days: number = 30) {
-		return this.historyService.getPnL(symbol, days);
+	async getPnL(@Query('symbol') symbol?: string, @Query('days') days?: string) {
+		const parsedDays = days ? parseInt(days) : 30;
+		return this.historyService.getPnL(symbol, parsedDays);
 	}
 
 	@Get('export/trades')
@@ -475,8 +463,9 @@ export class AsterController {
 	@ApiQuery({ name: 'symbol', required: false, description: 'Filter by trading symbol' })
 	@ApiQuery({ name: 'days', required: false, description: 'Number of days (default: 30)' })
 	@ApiResponse({ status: 200, description: 'CSV export successful' })
-	async exportTrades(@Query('symbol') symbol?: string, @Query('days') days: number = 30) {
-		return this.historyService.exportTradeHistoryCSV(symbol, days);
+	async exportTrades(@Query('symbol') symbol?: string, @Query('days') days?: string) {
+		const parsedDays = days ? parseInt(days) : 30;
+		return this.historyService.exportTradeHistoryCSV(symbol, parsedDays);
 	}
 
 	// WebSocket endpoints
@@ -556,8 +545,9 @@ export class AsterController {
 	@ApiQuery({ name: 'symbol', description: 'Trading symbol', required: true })
 	@ApiQuery({ name: 'limit', description: 'Limit for order book depth (default: 500)', required: false })
 	@ApiResponse({ status: 200, description: 'Order book retrieved successfully' })
-	async getOrderBook(@Query('symbol') symbol: string, @Query('limit') limit: number = 500) {
-		return this.asterApiService.getOrderBook(symbol, limit);
+	async getOrderBook(@Query('symbol') symbol: string, @Query('limit') limit?: string) {
+		const parsedLimit = limit ? parseInt(limit) : 500;
+		return this.asterApiService.getOrderBook(symbol, parsedLimit);
 	}
 
 	@Get('market/trades')
@@ -565,8 +555,9 @@ export class AsterController {
 	@ApiQuery({ name: 'symbol', description: 'Trading symbol', required: true })
 	@ApiQuery({ name: 'limit', description: 'Number of trades to return (default: 500)', required: false })
 	@ApiResponse({ status: 200, description: 'Recent market trades retrieved successfully' })
-	async getMarketTrades(@Query('symbol') symbol: string, @Query('limit') limit: number = 500) {
-		return this.asterApiService.getRecentTrades(symbol, limit);
+	async getMarketTrades(@Query('symbol') symbol: string, @Query('limit') limit?: string) {
+		const parsedLimit = limit ? parseInt(limit) : 500;
+		return this.asterApiService.getRecentTrades(symbol, parsedLimit);
 	}
 
 	@Get('ticker/24hr')
@@ -604,11 +595,14 @@ export class AsterController {
 	async getKlines(
 		@Query('symbol') symbol: string,
 		@Query('interval') interval: string,
-		@Query('startTime') startTime?: number,
-		@Query('endTime') endTime?: number,
-		@Query('limit') limit: number = 500
+		@Query('startTime') startTime?: string,
+		@Query('endTime') endTime?: string,
+		@Query('limit') limit?: string
 	) {
-		return this.asterApiService.getKlines(symbol, interval, startTime, endTime, limit);
+		const parsedStartTime = startTime ? parseInt(startTime) : undefined;
+		const parsedEndTime = endTime ? parseInt(endTime) : undefined;
+		const parsedLimit = limit ? parseInt(limit) : 500;
+		return this.asterApiService.getKlines(symbol, interval, parsedStartTime, parsedEndTime, parsedLimit);
 	}
 
 	@Get('premiumIndex')
@@ -628,14 +622,17 @@ export class AsterController {
 	@ApiResponse({ status: 200, description: 'Funding rate history retrieved successfully' })
 	async getFundingRate(
 		@Query('symbol') symbol?: string,
-		@Query('startTime') startTime?: number,
-		@Query('endTime') endTime?: number,
-		@Query('limit') limit: number = 100
+		@Query('startTime') startTime?: string,
+		@Query('endTime') endTime?: string,
+		@Query('limit') limit?: string
 	) {
-		return this.asterApiService.getFundingRate(symbol, startTime, endTime, limit);
+		const parsedStartTime = startTime ? parseInt(startTime) : undefined;
+		const parsedEndTime = endTime ? parseInt(endTime) : undefined;
+		const parsedLimit = limit ? parseInt(limit) : 100;
+		return this.asterApiService.getFundingRate(symbol, parsedStartTime, parsedEndTime, parsedLimit);
 	}
 
-	// New Market Data Endpoints from MarketDataService
+	// Additional Market Data Endpoints
 	@Get('market/symbols')
 	@ApiOperation({ summary: 'Get all trading symbols' })
 	@ApiResponse({ status: 200, description: 'Trading symbols retrieved successfully' })
@@ -649,40 +646,5 @@ export class AsterController {
 	@ApiResponse({ status: 200, description: 'Current price retrieved successfully' })
 	async getCurrentPrice(@Param('symbol') symbol: string) {
 		return this.marketDataService.getCurrentPrice(symbol);
-	}
-
-	@Get('market/depth/:symbol')
-	@ApiOperation({ summary: 'Get formatted market depth' })
-	@ApiParam({ name: 'symbol', description: 'Trading symbol' })
-	@ApiQuery({ name: 'limit', description: 'Limit for order book depth (default: 10)', required: false })
-	@ApiResponse({ status: 200, description: 'Market depth retrieved successfully' })
-	async getMarketDepth(@Param('symbol') symbol: string, @Query('limit') limit: number = 10) {
-		return this.marketDataService.getMarketDepth(symbol, limit);
-	}
-
-	@Get('market/ticker24hr/:symbol')
-	@ApiOperation({ summary: 'Get 24hr ticker for specific symbol' })
-	@ApiParam({ name: 'symbol', description: 'Trading symbol' })
-	@ApiResponse({ status: 200, description: '24hr ticker retrieved successfully' })
-	async get24hrTickerForSymbol(@Param('symbol') symbol: string) {
-		return this.marketDataService.get24hrTicker(symbol);
-	}
-
-	@Get('market/klines/:symbol')
-	@ApiOperation({ summary: 'Get klines with improved parameters' })
-	@ApiParam({ name: 'symbol', description: 'Trading symbol' })
-	@ApiQuery({ name: 'interval', description: 'Kline interval (1m, 5m, 15m, 30m, 1h, 4h, 1d)', required: true })
-	@ApiQuery({ name: 'startTime', description: 'Start time (timestamp)', required: false })
-	@ApiQuery({ name: 'endTime', description: 'End time (timestamp)', required: false })
-	@ApiQuery({ name: 'limit', description: 'Number of klines', required: true })
-	@ApiResponse({ status: 200, description: 'Klines retrieved successfully' })
-	async getKlinesForSymbol(
-		@Param('symbol') symbol: string,
-		@Query('interval') interval: string,
-		@Query('startTime') startTime?: number,
-		@Query('endTime') endTime?: number,
-		@Query('limit') limit: number = 500
-	) {
-		return this.marketDataService.getKlines(symbol, interval, startTime, endTime, limit);
 	}
 }

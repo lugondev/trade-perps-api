@@ -82,14 +82,8 @@ export class AsterApiService {
 				throw new Error('HMAC API credentials (apiKey/apiSecret) are required');
 			}
 
-			// Sort params alphabetically (important for signature)
-			const sortedParams: Record<string, any> = {};
-			Object.keys(params).sort().forEach(key => {
-				sortedParams[key] = params[key];
-			});
-
-			// Build URL-encoded query string
-			const qs = new URLSearchParams(sortedParams as any).toString();
+			// Build URL-encoded query string preserving insertion order (DO NOT SORT!)
+			const qs = new URLSearchParams(params as any).toString();
 
 			// Compute HMAC SHA256 signature
 			const signature = require('crypto').createHmac('sha256', this.credentials.apiSecret as string)
@@ -128,14 +122,8 @@ export class AsterApiService {
 				throw new Error('HMAC API credentials (apiKey/apiSecret) are required');
 			}
 
-			// Sort params alphabetically (important for signature)
-			const sortedParams: Record<string, any> = {};
-			Object.keys(params).sort().forEach(key => {
-				sortedParams[key] = params[key];
-			});
-
-			// Build URL-encoded query string
-			const qs = new URLSearchParams(sortedParams as any).toString();
+			// Build URL-encoded query string preserving insertion order (DO NOT SORT!)
+			const qs = new URLSearchParams(params as any).toString();
 
 			// Compute HMAC SHA256 signature
 			const signature = require('crypto').createHmac('sha256', this.credentials.apiSecret as string)
@@ -191,14 +179,9 @@ export class AsterApiService {
 							allParams.recvWindow = 50000;
 						}
 
-						// IMPORTANT: Sort params alphabetically for consistent signature
-						const sortedParams: Record<string, any> = {};
-						Object.keys(allParams).sort().forEach(key => {
-							sortedParams[key] = allParams[key];
-						});
-
-						// Generate HMAC signature with sorted params
-						const queryString = new URLSearchParams(sortedParams as any).toString();
+						// IMPORTANT: Preserve insertion order (DO NOT SORT!)
+						// Binance expects parameters in the order they were added
+						const queryString = new URLSearchParams(allParams as any).toString();
 						const signature = require('crypto')
 							.createHmac('sha256', this.credentials.apiSecret)
 							.update(queryString)
@@ -208,16 +191,16 @@ export class AsterApiService {
 						this.logger.debug('HMAC Signature:', signature);
 
 						// Add signature to params
-						sortedParams.signature = signature;
+						allParams.signature = signature;
 
 						// Set API key header
 						config.headers['X-MBX-APIKEY'] = this.credentials.apiKey;
 
 						// Update config with signed params
 						if (config.method?.toLowerCase() === 'post') {
-							config.data = sortedParams;
+							config.data = allParams;
 						} else {
-							config.params = sortedParams;
+							config.params = allParams;
 						}
 					} else {
 						// Ethereum wallet signature for /fapi/v3/* endpoints
@@ -308,6 +291,9 @@ export class AsterApiService {
 			'/fapi/v1/order',
 			'/fapi/v1/openOrders',
 			'/fapi/v1/allOrders',
+			'/fapi/v1/userTrades',
+			'/fapi/v1/income',
+			'/fapi/v1/positionRisk',
 		];
 
 		// For now, use Ethereum signature for ALL endpoints until we confirm HMAC works
