@@ -88,6 +88,7 @@ export class TradingService {
 
 	/**
 	 * Cancel an existing order (Cancel Order TRADE endpoint)
+	 * Uses /fapi/v1/order with HMAC SHA256
 	 */
 	async cancelOrder(orderId: string, symbol: string, origClientOrderId?: string): Promise<AsterApiResponse<Order>> {
 		try {
@@ -107,7 +108,8 @@ export class TradingService {
 				params.origClientOrderId = origClientOrderId;
 			}
 
-			const response = await this.asterApiService.delete<Order>('/fapi/v1/order', params);
+			// Use HMAC DELETE for v1 endpoint
+			const response = await this.asterApiService.hmacDelete<Order>('/fapi/v1/order', params);
 
 			if (response.success) {
 				this.logger.log(`Order cancelled successfully: ${orderId}`);
@@ -126,9 +128,15 @@ export class TradingService {
 
 	/**
 	 * Get order status (Query Order USER_DATA endpoint)
+	 * Uses /fapi/v1/order with HMAC SHA256
 	 */
 	async getOrder(symbol: string, orderId?: string, origClientOrderId?: string): Promise<AsterApiResponse<Order>> {
 		try {
+			// Either orderId or origClientOrderId must be provided
+			if (!orderId && !origClientOrderId) {
+				throw new Error('Either orderId or origClientOrderId must be provided');
+			}
+
 			const params: any = {
 				symbol,
 				timestamp: Date.now(),
@@ -143,7 +151,8 @@ export class TradingService {
 				params.origClientOrderId = origClientOrderId;
 			}
 
-			const response = await this.asterApiService.get<Order>('/fapi/v1/order', params);
+			// Use HMAC GET for v1 endpoint
+			const response = await this.asterApiService.hmacGet<Order>('/fapi/v1/order', params);
 
 			return response;
 		} catch (error) {
@@ -158,6 +167,7 @@ export class TradingService {
 
 	/**
 	 * Get all open orders (Current All Open Orders USER_DATA endpoint)
+	 * Uses /fapi/v1/openOrders with HMAC SHA256
 	 */
 	async getOpenOrders(symbol?: string): Promise<AsterApiResponse<Order[]>> {
 		try {
@@ -170,7 +180,8 @@ export class TradingService {
 				params.symbol = symbol;
 			}
 
-			const response = await this.asterApiService.get<Order[]>('/fapi/v1/openOrders', params);
+			// Use HMAC GET for v1 endpoint
+			const response = await this.asterApiService.hmacGet<Order[]>('/fapi/v1/openOrders', params);
 
 			return response;
 		} catch (error) {
@@ -185,6 +196,7 @@ export class TradingService {
 
 	/**
 	 * Cancel all open orders (Cancel All Open Orders TRADE endpoint)
+	 * Uses /fapi/v1/allOpenOrders with HMAC SHA256
 	 */
 	async cancelAllOrders(symbol: string): Promise<AsterApiResponse<any>> {
 		try {
@@ -196,7 +208,8 @@ export class TradingService {
 				recvWindow: 50000,
 			};
 
-			const response = await this.asterApiService.delete<any>('/fapi/v1/allOpenOrders', params);
+			// Use HMAC DELETE for v1 endpoint
+			const response = await this.asterApiService.hmacDelete<any>('/fapi/v1/allOpenOrders', params);
 
 			if (response.success) {
 				this.logger.log(`All orders cancelled successfully for ${symbol}`);
@@ -731,6 +744,103 @@ export class TradingService {
 				success: false,
 				error: error.message || 'Failed to execute quick short',
 				data: error.response?.data || null, // Return detailed error from API
+				timestamp: Date.now(),
+			};
+		}
+	}
+
+	/**
+	 * Get all positions for account (Position Information v3 USER_DATA endpoint)
+	 * GET /fapi/v3/positionRisk
+	 */
+	async getPositions(symbol?: string): Promise<AsterApiResponse<any[]>> {
+		try {
+			const params: any = {
+				timestamp: Date.now(),
+				recvWindow: 50000,
+			};
+
+			if (symbol) {
+				params.symbol = symbol;
+			}
+
+			const response = await this.asterApiService.get<any[]>('/fapi/v3/positionRisk', params);
+
+			return response;
+		} catch (error) {
+			this.logger.error('Error fetching positions:', error);
+			return {
+				success: false,
+				error: error.message || 'Failed to fetch positions',
+				timestamp: Date.now(),
+			};
+		}
+	}
+
+	/**
+	 * Get account information (Account Information v3 USER_DATA endpoint)
+	 * GET /fapi/v3/account
+	 */
+	async getAccountInfo(): Promise<AsterApiResponse<any>> {
+		try {
+			const params = {
+				timestamp: Date.now(),
+				recvWindow: 50000,
+			};
+
+			const response = await this.asterApiService.get<any>('/fapi/v3/account', params);
+
+			return response;
+		} catch (error) {
+			this.logger.error('Error fetching account information:', error);
+			return {
+				success: false,
+				error: error.message || 'Failed to fetch account information',
+				timestamp: Date.now(),
+			};
+		}
+	}
+
+	/**
+	 * Get all orders history (All Orders USER_DATA endpoint)
+	 * Uses /fapi/v1/allOrders with HMAC SHA256
+	 */
+	async getAllOrders(
+		symbol: string,
+		orderId?: string,
+		startTime?: number,
+		endTime?: number,
+		limit: number = 500
+	): Promise<AsterApiResponse<Order[]>> {
+		try {
+			const params: any = {
+				symbol,
+				timestamp: Date.now(),
+				recvWindow: 50000,
+				limit,
+			};
+
+			if (startTime) {
+				params.startTime = startTime;
+			}
+
+			if (endTime) {
+				params.endTime = endTime;
+			}
+
+			if (orderId) {
+				params.orderId = orderId;
+			}
+
+			// Use HMAC GET for v1 endpoint
+			const response = await this.asterApiService.hmacGet<Order[]>('/fapi/v1/allOrders', params);
+
+			return response;
+		} catch (error) {
+			this.logger.error('Error fetching all orders:', error);
+			return {
+				success: false,
+				error: error.message || 'Failed to fetch all orders',
 				timestamp: Date.now(),
 			};
 		}

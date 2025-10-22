@@ -105,6 +105,21 @@ export class AsterController {
 		return this.balanceService.getPositionRisk(symbol);
 	}
 
+	@Get('trading/positions')
+	@ApiOperation({ summary: 'Get all positions (from trading service)' })
+	@ApiQuery({ name: 'symbol', description: 'Trading symbol (optional)', required: false })
+	@ApiResponse({ status: 200, description: 'Positions retrieved successfully' })
+	async getTradingPositions(@Query('symbol') symbol?: string) {
+		return this.tradingService.getPositions(symbol);
+	}
+
+	@Get('trading/account')
+	@ApiOperation({ summary: 'Get account info (from trading service)' })
+	@ApiResponse({ status: 200, description: 'Account info retrieved successfully' })
+	async getTradingAccount() {
+		return this.tradingService.getAccountInfo();
+	}
+
 	// Trading endpoints
 	@Post('orders')
 	@ApiOperation({ summary: 'Place a new order' })
@@ -137,21 +152,41 @@ export class AsterController {
 		return this.tradingService.cancelOrder(orderId, symbol);
 	}
 
-	@Get('orders/:orderId')
-	@ApiOperation({ summary: 'Get order details' })
-	@ApiParam({ name: 'orderId', description: 'Order ID' })
-	@ApiQuery({ name: 'symbol', required: false, description: 'Trading symbol' })
-	@ApiResponse({ status: 200, description: 'Order details retrieved successfully' })
-	async getOrder(@Param('orderId') orderId: string, @Query('symbol') symbol?: string) {
-		return this.tradingService.getOrder(orderId, symbol);
-	}
+
 
 	@Get('orders/open')
 	@ApiOperation({ summary: 'Get all open orders' })
 	@ApiQuery({ name: 'symbol', required: false, description: 'Filter by trading symbol' })
 	@ApiResponse({ status: 200, description: 'Open orders retrieved successfully' })
 	async getOpenOrders(@Query('symbol') symbol?: string) {
-		return this.tradingService.getOpenOrders(symbol);
+		return this.historyService.getOpenOrders(symbol);
+	}
+
+	@Get('orders/all')
+	@ApiOperation({ summary: 'Get all orders history' })
+	@ApiQuery({ name: 'symbol', required: true, description: 'Trading symbol' })
+	@ApiParam({ name: 'orderId', description: 'Order ID' })
+	@ApiQuery({ name: 'startTime', required: false, description: 'Start time in ms (optional)' })
+	@ApiQuery({ name: 'endTime', required: false, description: 'End time in ms (optional)' })
+	@ApiQuery({ name: 'limit', required: false, description: 'Limit (default 500, max 1000)' })
+	@ApiResponse({ status: 200, description: 'Orders history retrieved successfully' })
+	async getAllOrders(
+		@Query('symbol') symbol: string,
+		@Query('orderId') orderId?: string,
+		@Query('startTime') startTime?: number,
+		@Query('endTime') endTime?: number,
+		@Query('limit') limit?: number
+	) {
+		return this.tradingService.getAllOrders(symbol, orderId, startTime, endTime, limit);
+	}
+
+	@Get('orders/:orderId')
+	@ApiOperation({ summary: 'Get order details' })
+	@ApiParam({ name: 'orderId', description: 'Order ID' })
+	@ApiQuery({ name: 'symbol', required: true, description: 'Trading symbol' })
+	@ApiResponse({ status: 200, description: 'Order details retrieved successfully' })
+	async getOrder(@Param('orderId') orderId: string, @Query('symbol') symbol: string) {
+		return this.tradingService.getOrder(symbol, orderId);
 	}
 
 	@Delete('orders')

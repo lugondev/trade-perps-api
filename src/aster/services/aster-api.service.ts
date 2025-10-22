@@ -72,6 +72,98 @@ export class AsterApiService {
 		}
 	}
 
+	/**
+	 * GET with Binance-style HMAC SHA256 signature.
+	 * This bypasses the request interceptors and constructs query string + signature manually.
+	 */
+	async hmacGet<T = any>(endpoint: string, params: Record<string, any>): Promise<AsterApiResponse<T>> {
+		try {
+			if (!this.credentials.apiKey || !this.credentials.apiSecret) {
+				throw new Error('HMAC API credentials (apiKey/apiSecret) are required');
+			}
+
+			// Sort params alphabetically (important for signature)
+			const sortedParams: Record<string, any> = {};
+			Object.keys(params).sort().forEach(key => {
+				sortedParams[key] = params[key];
+			});
+
+			// Build URL-encoded query string
+			const qs = new URLSearchParams(sortedParams as any).toString();
+
+			// Compute HMAC SHA256 signature
+			const signature = require('crypto').createHmac('sha256', this.credentials.apiSecret as string)
+				.update(qs)
+				.digest('hex');
+
+			const queryString = qs + `&signature=${signature}`;
+
+			const url = this.baseURL + endpoint + '?' + queryString;
+
+			this.logger.debug('HMAC GET URL:', url);
+			this.logger.debug('HMAC Query String:', qs);
+			this.logger.debug('HMAC Signature:', signature);
+
+			const response = await axios.get(url, {
+				headers: {
+					'X-MBX-APIKEY': this.credentials.apiKey,
+					'User-Agent': 'Aster-Trading-Bot/1.0',
+				},
+				timeout: 30000,
+			});
+
+			return this.formatResponse(response.data);
+		} catch (error) {
+			return this.handleError(error);
+		}
+	}
+
+	/**
+	 * DELETE with Binance-style HMAC SHA256 signature.
+	 * This bypasses the request interceptors and constructs query string + signature manually.
+	 */
+	async hmacDelete<T = any>(endpoint: string, params: Record<string, any>): Promise<AsterApiResponse<T>> {
+		try {
+			if (!this.credentials.apiKey || !this.credentials.apiSecret) {
+				throw new Error('HMAC API credentials (apiKey/apiSecret) are required');
+			}
+
+			// Sort params alphabetically (important for signature)
+			const sortedParams: Record<string, any> = {};
+			Object.keys(params).sort().forEach(key => {
+				sortedParams[key] = params[key];
+			});
+
+			// Build URL-encoded query string
+			const qs = new URLSearchParams(sortedParams as any).toString();
+
+			// Compute HMAC SHA256 signature
+			const signature = require('crypto').createHmac('sha256', this.credentials.apiSecret as string)
+				.update(qs)
+				.digest('hex');
+
+			const queryString = qs + `&signature=${signature}`;
+
+			const url = this.baseURL + endpoint + '?' + queryString;
+
+			this.logger.debug('HMAC DELETE URL:', url);
+			this.logger.debug('HMAC Query String:', qs);
+			this.logger.debug('HMAC Signature:', signature);
+
+			const response = await axios.delete(url, {
+				headers: {
+					'X-MBX-APIKEY': this.credentials.apiKey,
+					'User-Agent': 'Aster-Trading-Bot/1.0',
+				},
+				timeout: 30000,
+			});
+
+			return this.formatResponse(response.data);
+		} catch (error) {
+			return this.handleError(error);
+		}
+	}
+
 	private setupInterceptors(): void {
 		// Request interceptor for authentication
 		this.httpClient.interceptors.request.use(
@@ -99,8 +191,14 @@ export class AsterApiService {
 							allParams.recvWindow = 50000;
 						}
 
-						// Generate HMAC signature
-						const queryString = new URLSearchParams(allParams).toString();
+						// IMPORTANT: Sort params alphabetically for consistent signature
+						const sortedParams: Record<string, any> = {};
+						Object.keys(allParams).sort().forEach(key => {
+							sortedParams[key] = allParams[key];
+						});
+
+						// Generate HMAC signature with sorted params
+						const queryString = new URLSearchParams(sortedParams as any).toString();
 						const signature = require('crypto')
 							.createHmac('sha256', this.credentials.apiSecret)
 							.update(queryString)
@@ -109,17 +207,17 @@ export class AsterApiService {
 						this.logger.debug('HMAC Query String:', queryString);
 						this.logger.debug('HMAC Signature:', signature);
 
-						// Add signature and API key
-						allParams.signature = signature;
+						// Add signature to params
+						sortedParams.signature = signature;
 
 						// Set API key header
 						config.headers['X-MBX-APIKEY'] = this.credentials.apiKey;
 
 						// Update config with signed params
 						if (config.method?.toLowerCase() === 'post') {
-							config.data = allParams;
+							config.data = sortedParams;
 						} else {
-							config.params = allParams;
+							config.params = sortedParams;
 						}
 					} else {
 						// Ethereum wallet signature for /fapi/v3/* endpoints
@@ -183,6 +281,7 @@ export class AsterApiService {
 			'/fapi/v3/order',
 			'/fapi/v3/balance',
 			'/fapi/v3/account',
+			'/fapi/v3/positionRisk',
 			'/fapi/v3/leverage',
 			'/fapi/v1/order',
 			'/fapi/v1/allOrders',
@@ -200,25 +299,27 @@ export class AsterApiService {
 	}
 
 	private usesHMACSignature(endpoint: string): boolean {
-		// /fapi/v1/* endpoints use HMAC SHA256 with API key/secret
-		// /fapi/v3/* endpoints use Ethereum wallet signature
+		// Aster DEX specific: Some v1 endpoints may use HMAC, others use Ethereum signature
+		// Based on actual API behavior, we need to test which endpoints accept HMAC
 
-		// Extract pathname from endpoint (handle full URL or relative path)
-		try {
-			// If endpoint is absolute URL, parse it
-			if (endpoint.startsWith('http://') || endpoint.startsWith('https://')) {
-				const url = new URL(endpoint);
-				return url.pathname.startsWith('/fapi/v1/');
-			}
+		// List of endpoints that definitely use HMAC SHA256 (to be confirmed by testing)
+		const hmacEndpoints = [
+			// Uncomment these if they work with HMAC:
+			// '/fapi/v1/order',
+			// '/fapi/v1/openOrders',
+			// '/fapi/v1/allOrders',
+		];
 
-			// If relative path, remove query string and check
-			const pathname = endpoint.split('?')[0];
-			return pathname.startsWith('/fapi/v1/');
-		} catch (error) {
-			// Fallback to simple includes check if parsing fails
-			this.logger.warn(`Failed to parse endpoint for HMAC check: ${endpoint}`, error);
-			return endpoint.includes('/fapi/v1/');
+		// For now, use Ethereum signature for ALL endpoints until we confirm HMAC works
+		// If you want to test HMAC for specific endpoints, uncomment them above
+		const useEthereumForAll = true;
+
+		if (useEthereumForAll) {
+			return false;
 		}
+
+		// Check if endpoint is in HMAC list
+		return hmacEndpoints.some(hmacEndpoint => endpoint.includes(hmacEndpoint));
 	}
 
 	private async generateAsterSignature(config: AxiosRequestConfig): Promise<AsterSignatureParams> {
