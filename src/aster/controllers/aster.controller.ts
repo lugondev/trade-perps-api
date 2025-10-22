@@ -6,7 +6,7 @@ import { HistoryService } from '../services/history.service';
 import { AsterWebSocketService } from '../services/aster-websocket.service';
 import { AsterApiService } from '../services/aster-api.service';
 import { MarketDataService } from '../services/market-data.service';
-import { OrderRequest } from '../types';
+import { OrderRequest, ClosePositionRequest, CloseAllPositionRequest } from '../types';
 import { ApiKeyAuth } from '../../common/decorators/api-key.decorator';
 
 @ApiTags('aster')
@@ -648,5 +648,193 @@ export class AsterController {
 	@ApiResponse({ status: 200, description: 'Current price retrieved successfully' })
 	async getCurrentPrice(@Param('symbol') symbol: string) {
 		return this.marketDataService.getCurrentPrice(symbol);
+	}
+
+	// Position closing endpoints
+	@Post('positions/close-simple')
+	@ApiOperation({
+		summary: 'Simple close position - just provide symbol',
+		description: 'Automatically closes ALL positions and cancels ALL open orders (TP/SL) for the symbol'
+	})
+	@ApiBody({
+		schema: {
+			type: 'object',
+			properties: {
+				symbol: { type: 'string', example: 'BTCUSDT', description: 'Trading symbol to close all positions and cancel all orders' }
+			},
+			required: ['symbol']
+		}
+	})
+	@ApiResponse({
+		status: 200,
+		description: 'All positions closed and orders cancelled successfully',
+		schema: {
+			type: 'object',
+			properties: {
+				success: { type: 'boolean' },
+				data: {
+					type: 'object',
+					properties: {
+						cancelledOrders: { type: 'number', description: 'Number of cancelled orders (TP/SL)' },
+						closedPositions: { type: 'array', description: 'List of closed positions' },
+						totalClosed: { type: 'number', description: 'Total number of positions closed' }
+					}
+				},
+				timestamp: { type: 'number' }
+			}
+		}
+	})
+	async closePositionSimple(@Body() body: { symbol: string }) {
+		return this.tradingService.closePositionSimple(body.symbol);
+	}
+
+	@Post('positions/close')
+	@ApiOperation({ summary: 'Close position (full or partial)' })
+	@ApiBody({
+		description: 'Close position request',
+		schema: {
+			type: 'object',
+			properties: {
+				symbol: { type: 'string', example: 'BTCUSDT', description: 'Trading symbol' },
+				positionSide: { type: 'string', enum: ['BOTH', 'LONG', 'SHORT'], description: 'Position side to close (optional)' },
+				quantity: { type: 'string', example: '0.001', description: 'Quantity to close (optional, closes all if not provided)' },
+				type: { type: 'string', enum: ['MARKET', 'LIMIT'], description: 'Order type (default: MARKET)' },
+				price: { type: 'string', example: '45000.00', description: 'Price (required for LIMIT orders)' }
+			},
+			required: ['symbol']
+		}
+	})
+	@ApiResponse({ status: 200, description: 'Position closed successfully' })
+	async closePosition(@Body() closeRequest: ClosePositionRequest) {
+		return this.tradingService.closePosition(closeRequest);
+	}
+
+	@Post('positions/close-all')
+	@ApiOperation({ summary: 'Set stop-loss or take-profit to close all positions' })
+	@ApiBody({
+		description: 'Close all position request using STOP_MARKET or TAKE_PROFIT_MARKET',
+		schema: {
+			type: 'object',
+			properties: {
+				symbol: { type: 'string', example: 'BTCUSDT', description: 'Trading symbol' },
+				side: { type: 'string', enum: ['BUY', 'SELL'], description: 'BUY to close SHORT, SELL to close LONG' },
+				positionSide: { type: 'string', enum: ['BOTH', 'LONG', 'SHORT'], description: 'Position side (optional)' },
+				type: { type: 'string', enum: ['STOP_MARKET', 'TAKE_PROFIT_MARKET'], description: 'Order type' },
+				stopPrice: { type: 'string', example: '43000.00', description: 'Stop price to trigger' },
+				workingType: { type: 'string', enum: ['MARK_PRICE', 'CONTRACT_PRICE'], description: 'Price type (default: CONTRACT_PRICE)' },
+				priceProtect: { type: 'string', enum: ['TRUE', 'FALSE'], description: 'Enable price protection (optional)' }
+			},
+			required: ['symbol', 'side', 'type', 'stopPrice']
+		}
+	})
+	@ApiResponse({ status: 200, description: 'Close-all order set successfully' })
+	async closeAllPosition(@Body() request: CloseAllPositionRequest) {
+		return this.tradingService.closeAllPosition(request);
+	}
+
+	@Post('positions/close-long')
+	@ApiOperation({ summary: 'Quick close LONG position with market order' })
+	@ApiBody({
+		schema: {
+			type: 'object',
+			properties: {
+				symbol: { type: 'string', example: 'BTCUSDT' },
+				quantity: { type: 'string', example: '0.001', description: 'Quantity to close (optional, closes all if not provided)' }
+			},
+			required: ['symbol']
+		}
+	})
+	@ApiResponse({ status: 200, description: 'LONG position closed successfully' })
+	async closeLongPosition(@Body() body: { symbol: string; quantity?: string }) {
+		return this.tradingService.closeLongPosition(body.symbol, body.quantity);
+	}
+
+	@Post('positions/close-short')
+	@ApiOperation({ summary: 'Quick close SHORT position with market order' })
+	@ApiBody({
+		schema: {
+			type: 'object',
+			properties: {
+				symbol: { type: 'string', example: 'BTCUSDT' },
+				quantity: { type: 'string', example: '0.001', description: 'Quantity to close (optional, closes all if not provided)' }
+			},
+			required: ['symbol']
+		}
+	})
+	@ApiResponse({ status: 200, description: 'SHORT position closed successfully' })
+	async closeShortPosition(@Body() body: { symbol: string; quantity?: string }) {
+		return this.tradingService.closeShortPosition(body.symbol, body.quantity);
+	}
+
+	@Post('positions/stop-loss-long')
+	@ApiOperation({ summary: 'Set stop-loss for LONG position' })
+	@ApiBody({
+		schema: {
+			type: 'object',
+			properties: {
+				symbol: { type: 'string', example: 'BTCUSDT' },
+				stopPrice: { type: 'string', example: '43000.00', description: 'Stop-loss price' },
+				priceProtect: { type: 'string', enum: ['TRUE', 'FALSE'], description: 'Enable price protection (optional)' }
+			},
+			required: ['symbol', 'stopPrice']
+		}
+	})
+	@ApiResponse({ status: 200, description: 'Stop-loss set successfully' })
+	async setStopLossLong(@Body() body: { symbol: string; stopPrice: string; priceProtect?: string }) {
+		return this.tradingService.setStopLossLong(body.symbol, body.stopPrice, body.priceProtect);
+	}
+
+	@Post('positions/stop-loss-short')
+	@ApiOperation({ summary: 'Set stop-loss for SHORT position' })
+	@ApiBody({
+		schema: {
+			type: 'object',
+			properties: {
+				symbol: { type: 'string', example: 'BTCUSDT' },
+				stopPrice: { type: 'string', example: '47000.00', description: 'Stop-loss price' },
+				priceProtect: { type: 'string', enum: ['TRUE', 'FALSE'], description: 'Enable price protection (optional)' }
+			},
+			required: ['symbol', 'stopPrice']
+		}
+	})
+	@ApiResponse({ status: 200, description: 'Stop-loss set successfully' })
+	async setStopLossShort(@Body() body: { symbol: string; stopPrice: string; priceProtect?: string }) {
+		return this.tradingService.setStopLossShort(body.symbol, body.stopPrice, body.priceProtect);
+	}
+
+	@Post('positions/take-profit-long')
+	@ApiOperation({ summary: 'Set take-profit for LONG position' })
+	@ApiBody({
+		schema: {
+			type: 'object',
+			properties: {
+				symbol: { type: 'string', example: 'BTCUSDT' },
+				stopPrice: { type: 'string', example: '47000.00', description: 'Take-profit price' },
+				priceProtect: { type: 'string', enum: ['TRUE', 'FALSE'], description: 'Enable price protection (optional)' }
+			},
+			required: ['symbol', 'stopPrice']
+		}
+	})
+	@ApiResponse({ status: 200, description: 'Take-profit set successfully' })
+	async setTakeProfitLong(@Body() body: { symbol: string; stopPrice: string; priceProtect?: string }) {
+		return this.tradingService.setTakeProfitLong(body.symbol, body.stopPrice, body.priceProtect);
+	}
+
+	@Post('positions/take-profit-short')
+	@ApiOperation({ summary: 'Set take-profit for SHORT position' })
+	@ApiBody({
+		schema: {
+			type: 'object',
+			properties: {
+				symbol: { type: 'string', example: 'BTCUSDT' },
+				stopPrice: { type: 'string', example: '43000.00', description: 'Take-profit price' },
+				priceProtect: { type: 'string', enum: ['TRUE', 'FALSE'], description: 'Enable price protection (optional)' }
+			},
+			required: ['symbol', 'stopPrice']
+		}
+	})
+	@ApiResponse({ status: 200, description: 'Take-profit set successfully' })
+	async setTakeProfitShort(@Body() body: { symbol: string; stopPrice: string; priceProtect?: string }) {
+		return this.tradingService.setTakeProfitShort(body.symbol, body.stopPrice, body.priceProtect);
 	}
 }

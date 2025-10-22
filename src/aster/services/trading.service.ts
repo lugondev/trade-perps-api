@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { AsterApiService } from './aster-api.service';
 import { BalanceService } from './balance.service';
 import { MarketDataService } from './market-data.service';
-import { OrderRequest, Order, AsterApiResponse } from '../types';
+import { OrderRequest, Order, AsterApiResponse, ClosePositionRequest, CloseAllPositionRequest } from '../types';
 
 @Injectable()
 export class TradingService {
@@ -828,6 +828,316 @@ export class TradingService {
 			return {
 				success: false,
 				error: error.message || 'Failed to fetch all orders',
+				timestamp: Date.now(),
+			};
+		}
+
+	}
+	/**
+	 * Close position (full or partial)
+	 * Uses market or limit order with reduceOnly=true
+	 */
+	async closePosition(closeRequest: ClosePositionRequest): Promise<AsterApiResponse<Order>> {
+		try {
+			this.logger.debug(`Closing position for ${closeRequest.symbol}`);
+
+			// Get current position to determine side and quantity
+			const positionResponse = await this.balanceService.getPositionRisk(closeRequest.symbol);
+			if (!positionResponse.success || !positionResponse.data) {
+				return {
+					success: false,
+					error: 'Failed to get current position',
+					timestamp: Date.now(),
+				};
+			}
+
+			// Find the position based on positionSide
+			let position = positionResponse.data.find(p => {
+				if (closeRequest.positionSide) {
+					return p.positionSide === closeRequest.positionSide;
+				}
+				// If no positionSide specified, find any non-zero position
+				return parseFloat(p.positionAmt) !== 0;
+			});
+
+			if (!position) {
+				return {
+					success: false,
+					error: 'No open position found',
+					timestamp: Date.now(),
+				};
+			}
+
+			const positionAmt = parseFloat(position.positionAmt);
+			if (positionAmt === 0) {
+				return {
+					success: false,
+					error: 'Position amount is zero',
+					timestamp: Date.now(),
+				};
+			}
+
+			// Determine order side (opposite of position)
+			// Positive positionAmt = LONG position, need SELL to close
+			// Negative positionAmt = SHORT position, need BUY to close
+			const orderSide = positionAmt > 0 ? 'SELL' : 'BUY';
+
+			// Determine quantity to close
+			const quantity = closeRequest.quantity || Math.abs(positionAmt).toString();
+
+			// Build order request
+			const orderRequest: OrderRequest = {
+				symbol: closeRequest.symbol,
+				side: orderSide,
+				type: closeRequest.type || 'MARKET',
+				quantity,
+				reduceOnly: 'true',
+				positionSide: position.positionSide,
+			};
+
+			// Add price for LIMIT orders
+			if (closeRequest.type === 'LIMIT') {
+				if (!closeRequest.price) {
+					return {
+						success: false,
+						error: 'Price is required for LIMIT orders',
+						timestamp: Date.now(),
+					};
+				}
+				orderRequest.price = closeRequest.price;
+			}
+
+			this.logger.log(`Closing ${orderRequest.side} position for ${closeRequest.symbol}, quantity: ${quantity}`);
+
+			return this.placeOrder(orderRequest);
+		} catch (error) {
+			this.logger.error('Error closing position:', error);
+			return {
+				success: false,
+				error: error.message || 'Failed to close position',
+				timestamp: Date.now(),
+			};
+		}
+	}
+
+	/**
+	 * Close all positions using STOP_MARKET or TAKE_PROFIT_MARKET with closePosition=true
+	 * This is useful for setting stop-loss or take-profit to close entire position
+	 */
+	async closeAllPosition(request: CloseAllPositionRequest): Promise<AsterApiResponse<Order>> {
+		try {
+			this.logger.debug(`Setting close-all order for ${request.symbol}`);
+
+			// Validate: SELL with LONG or BUY with SHORT
+			if (request.positionSide === 'LONG' && request.side === 'BUY') {
+				return {
+					success: false,
+					error: 'Cannot use BUY orders in LONG position side',
+					timestamp: Date.now(),
+				};
+			}
+
+			if (request.positionSide === 'SHORT' && request.side === 'SELL') {
+				return {
+					success: false,
+					error: 'Cannot use SELL orders in SHORT position side',
+					timestamp: Date.now(),
+				};
+			}
+
+			// Build order request for close-all
+			const orderRequest: OrderRequest = {
+				symbol: request.symbol,
+				side: request.side,
+				type: request.type,
+				stopPrice: request.stopPrice,
+				closePosition: 'true',
+				workingType: request.workingType || 'CONTRACT_PRICE',
+			};
+
+			// Add optional fields
+			if (request.positionSide) {
+				orderRequest.positionSide = request.positionSide;
+			}
+
+			if (request.priceProtect) {
+				orderRequest.priceProtect = request.priceProtect;
+			}
+
+			this.logger.log(`Setting ${request.type} close-all order for ${request.symbol} at stopPrice ${request.stopPrice}`);
+
+			return this.placeOrder(orderRequest);
+		} catch (error) {
+			this.logger.error('Error setting close-all order:', error);
+			return {
+				success: false,
+				error: error.message || 'Failed to set close-all order',
+				timestamp: Date.now(),
+			};
+		}
+	}
+
+	/**
+	 * Quick method to close LONG position with market order
+	 */
+	async closeLongPosition(symbol: string, quantity?: string): Promise<AsterApiResponse<Order>> {
+		return this.closePosition({
+			symbol,
+			positionSide: 'LONG',
+			quantity,
+			type: 'MARKET',
+		});
+	}
+
+	/**
+	 * Quick method to close SHORT position with market order
+	 */
+	async closeShortPosition(symbol: string, quantity?: string): Promise<AsterApiResponse<Order>> {
+		return this.closePosition({
+			symbol,
+			positionSide: 'SHORT',
+			quantity,
+			type: 'MARKET',
+		});
+	}
+
+	/**
+	 * Set stop-loss to close all LONG position
+	 */
+	async setStopLossLong(symbol: string, stopPrice: string, priceProtect?: string): Promise<AsterApiResponse<Order>> {
+		return this.closeAllPosition({
+			symbol,
+			side: 'SELL',
+			positionSide: 'LONG',
+			type: 'STOP_MARKET',
+			stopPrice,
+			priceProtect,
+		});
+	}
+
+	/**
+	 * Set stop-loss to close all SHORT position
+	 */
+	async setStopLossShort(symbol: string, stopPrice: string, priceProtect?: string): Promise<AsterApiResponse<Order>> {
+		return this.closeAllPosition({
+			symbol,
+			side: 'BUY',
+			positionSide: 'SHORT',
+			type: 'STOP_MARKET',
+			stopPrice,
+			priceProtect,
+		});
+	}
+
+	/**
+	 * Set take-profit to close all LONG position
+	 */
+	async setTakeProfitLong(symbol: string, stopPrice: string, priceProtect?: string): Promise<AsterApiResponse<Order>> {
+		return this.closeAllPosition({
+			symbol,
+			side: 'SELL',
+			positionSide: 'LONG',
+			type: 'TAKE_PROFIT_MARKET',
+			stopPrice,
+			priceProtect,
+		});
+	}
+
+	/**
+	 * Set take-profit to close all SHORT position
+	 */
+	async setTakeProfitShort(symbol: string, stopPrice: string, priceProtect?: string): Promise<AsterApiResponse<Order>> {
+		return this.closeAllPosition({
+			symbol,
+			side: 'BUY',
+			positionSide: 'SHORT',
+			type: 'TAKE_PROFIT_MARKET',
+			stopPrice,
+			priceProtect,
+		});
+	}
+
+	/**
+	 * Simple close position - just provide symbol
+	 * Automatically detects and closes ALL open positions for the symbol
+	 * Also cancels all open orders (TP/SL) for the symbol
+	 */
+	async closePositionSimple(symbol: string): Promise<AsterApiResponse<any>> {
+		try {
+			this.logger.debug(`Simple close position for ${symbol}`);
+
+			// Step 1: Cancel all open orders (TP/SL) for this symbol
+			this.logger.debug(`Cancelling all open orders for ${symbol}`);
+			const cancelResult = await this.cancelAllOrders(symbol);
+			const cancelledOrders = cancelResult.success ? (cancelResult.data?.length || 0) : 0;
+
+			// Step 2: Get current positions
+			const positionResponse = await this.balanceService.getPositionRisk(symbol);
+			if (!positionResponse.success || !positionResponse.data) {
+				return {
+					success: false,
+					error: 'Failed to get current positions',
+					timestamp: Date.now(),
+				};
+			}
+
+			// Find all non-zero positions
+			const openPositions = positionResponse.data.filter(p => parseFloat(p.positionAmt) !== 0);
+
+			if (openPositions.length === 0) {
+				return {
+					success: cancelledOrders > 0,
+					data: {
+						message: cancelledOrders > 0
+							? `No open positions, but cancelled ${cancelledOrders} open orders`
+							: 'No open positions or orders found for this symbol',
+						cancelledOrders,
+						closedPositions: [],
+						totalClosed: 0,
+					},
+					timestamp: Date.now(),
+				};
+			}
+
+			// Step 3: Close all positions
+			const results = [];
+			for (const position of openPositions) {
+				const positionAmt = parseFloat(position.positionAmt);
+				const orderSide = positionAmt > 0 ? 'SELL' : 'BUY';
+				const quantity = Math.abs(positionAmt).toString();
+
+				const orderRequest: OrderRequest = {
+					symbol,
+					side: orderSide,
+					type: 'MARKET',
+					quantity,
+					reduceOnly: 'true',
+					positionSide: position.positionSide,
+				};
+
+				const result = await this.placeOrder(orderRequest);
+				results.push({
+					positionSide: position.positionSide,
+					quantity,
+					side: orderSide,
+					result,
+				});
+			}
+
+			return {
+				success: true,
+				data: {
+					cancelledOrders,
+					closedPositions: results,
+					totalClosed: results.length,
+				},
+				timestamp: Date.now(),
+			};
+		} catch (error) {
+			this.logger.error('Error closing position:', error);
+			return {
+				success: false,
+				error: error.message || 'Failed to close position',
 				timestamp: Date.now(),
 			};
 		}

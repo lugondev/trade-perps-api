@@ -60,6 +60,24 @@ export interface OrderRequest {
 	timestamp?: number;
 }
 
+export interface ClosePositionRequest {
+	symbol: string;
+	positionSide?: 'BOTH' | 'LONG' | 'SHORT';
+	quantity?: string; // Optional: close partial position. If not provided, close all
+	type?: 'MARKET' | 'LIMIT'; // Default: MARKET
+	price?: string; // Required if type is LIMIT
+}
+
+export interface CloseAllPositionRequest {
+	symbol: string;
+	side: 'BUY' | 'SELL'; // BUY to close SHORT, SELL to close LONG
+	positionSide?: 'BOTH' | 'LONG' | 'SHORT';
+	type: 'STOP_MARKET' | 'TAKE_PROFIT_MARKET';
+	stopPrice: string;
+	workingType?: 'MARK_PRICE' | 'CONTRACT_PRICE';
+	priceProtect?: string;
+}
+
 export interface Order {
 	clientOrderId: string;
 	cumQty: string;
