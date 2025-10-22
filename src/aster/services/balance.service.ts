@@ -1,226 +1,128 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { AsterApiService } from './aster-api.service';
-import { Balance, BalanceResponse, AsterApiResponse } from '../types';
+import {
+	AccountInformation,
+	PositionRisk,
+	Balance,
+	IncomeHistory,
+	AsterApiResponse,
+} from '../types';
 
 @Injectable()
 export class BalanceService {
 	private readonly logger = new Logger(BalanceService.name);
 
-	constructor(private readonly asterApiService: AsterApiService) { }
+	constructor(private readonly asterApi: AsterApiService) { }
 
 	/**
-	 * Get account balances for all assets (Futures Account Balance v3)
+	 * Get account information including balances and positions
+	 * GET /fapi/v3/account
 	 */
-	async getBalances(): Promise<AsterApiResponse<BalanceResponse>> {
+	async getAccountInfo(): Promise<AsterApiResponse<AccountInformation>> {
 		try {
-			this.logger.debug('Fetching account balances');
-			const response = await this.asterApiService.get<any[]>('/fapi/v3/balance');
-
-			if (response.success && response.data) {
-				// Convert Aster balance format to our format
-				const balances: Balance[] = response.data.map(item => ({
-					asset: item.asset,
-					free: item.availableBalance || '0',
-					locked: (parseFloat(item.balance || '0') - parseFloat(item.availableBalance || '0')).toString(),
-					total: item.balance || '0',
-				}));
-
-				const balanceResponse: BalanceResponse = { balances };
-
-				this.logger.log(`Successfully fetched ${balances.length} balances`);
-				return {
-					success: true,
-					data: balanceResponse,
-					timestamp: Date.now(),
-				};
-			}
-
-			return {
-				success: false,
-				error: response.error || 'Failed to fetch balances',
-				timestamp: Date.now(),
-			};
-		} catch (error) {
-			this.logger.error('Error fetching balances:', error);
-			return {
-				success: false,
-				error: error.message || 'Failed to fetch balances',
-				timestamp: Date.now(),
-			};
-		}
-	}
-
-	/**
-	 * Get balance for a specific asset
-	 */
-	async getBalance(asset: string): Promise<AsterApiResponse<Balance | null>> {
-		try {
-			this.logger.debug(`Fetching balance for asset: ${asset}`);
-			const balancesResponse = await this.getBalances();
-
-			if (!balancesResponse.success || !balancesResponse.data) {
-				return {
-					success: false,
-					error: balancesResponse.error || 'Failed to fetch balances',
-					timestamp: Date.now(),
-				};
-			}
-
-			const balance = balancesResponse.data.balances.find(b => b.asset === asset.toUpperCase());
-
-			return {
-				success: true,
-				data: balance || null,
-				timestamp: Date.now(),
-			};
-		} catch (error) {
-			this.logger.error(`Error fetching balance for ${asset}:`, error);
-			return {
-				success: false,
-				error: error.message || `Failed to fetch balance for ${asset}`,
-				timestamp: Date.now(),
-			};
-		}
-	}
-
-	/**
-	 * Get total portfolio value in USD (if supported by API)
-	 */
-	async getPortfolioValue(): Promise<AsterApiResponse<{ totalValue: string; currency: string }>> {
-		try {
-			this.logger.debug('Fetching portfolio value');
-			// This endpoint might not exist - adjust based on actual Aster API
-			const response = await this.asterApiService.get('/api/v1/account/portfolio');
-
+			const response = await this.asterApi.get<AccountInformation>(
+				'/fapi/v3/account',
+			);
+			this.logger.log('Account info retrieved successfully');
 			return response;
 		} catch (error) {
-			this.logger.error('Error fetching portfolio value:', error);
+			this.logger.error('Failed to get account info', error.stack);
 			return {
 				success: false,
-				error: error.message || 'Failed to fetch portfolio value',
+				error: error.message || 'Failed to get account info',
 				timestamp: Date.now(),
 			};
 		}
 	}
 
 	/**
-	 * Get balances with non-zero amounts only
+	 * Get account balance
+	 * GET /fapi/v3/balance
 	 */
-	async getNonZeroBalances(): Promise<AsterApiResponse<Balance[]>> {
+	async getBalance(): Promise<AsterApiResponse<Balance[]>> {
 		try {
-			const balancesResponse = await this.getBalances();
-
-			if (!balancesResponse.success || !balancesResponse.data) {
-				return {
-					success: false,
-					error: balancesResponse.error || 'Failed to fetch balances',
-					timestamp: Date.now(),
-				};
-			}
-
-			// Filter balances where total > 0 (handle string comparison)
-			const nonZeroBalances = balancesResponse.data.balances.filter(balance => {
-				const totalAmount = parseFloat(balance.total);
-				return !isNaN(totalAmount) && totalAmount > 0;
-			});
-
-			this.logger.log(`Found ${nonZeroBalances.length} non-zero balances out of ${balancesResponse.data.balances.length} total`);
-
-			return {
-				success: true,
-				data: nonZeroBalances,
-				timestamp: Date.now(),
-			};
-		} catch (error) {
-			this.logger.error('Error filtering non-zero balances:', error);
-			return {
-				success: false,
-				error: error.message || 'Failed to process balances',
-				timestamp: Date.now(),
-			};
-		}
-	}
-
-	/**
-	 * Format balance for display
-	 */
-	formatBalance(balance: Balance): string {
-		const total = parseFloat(balance.total);
-		const free = parseFloat(balance.free);
-		const locked = parseFloat(balance.locked);
-
-		return `${balance.asset}: ${total.toFixed(8)} (Free: ${free.toFixed(8)}, Locked: ${locked.toFixed(8)})`;
-	}
-
-	/**
-	 * Check if account has sufficient balance for trading
-	 */
-	async hasSufficientBalance(asset: string, requiredAmount: string): Promise<boolean> {
-		try {
-			const balanceResponse = await this.getBalance(asset);
-
-			if (!balanceResponse.success || !balanceResponse.data) {
-				this.logger.warn(`Could not check balance for ${asset}`);
-				return false;
-			}
-
-			const availableBalance = parseFloat(balanceResponse.data.free);
-			const required = parseFloat(requiredAmount);
-
-			return availableBalance >= required;
-		} catch (error) {
-			this.logger.error(`Error checking sufficient balance for ${asset}:`, error);
-			return false;
-		}
-	}
-
-	/**
-	 * Get account information v3 (includes positions, assets, and margin info)
-	 */
-	async getAccountInfo(): Promise<AsterApiResponse<any>> {
-		try {
-			this.logger.debug('Fetching account information');
-			const response = await this.asterApiService.get<any>('/fapi/v3/account');
-
-			if (response.success) {
-				this.logger.log('Successfully fetched account information');
-			}
-
+			const response = await this.asterApi.get<Balance[]>('/fapi/v3/balance');
+			this.logger.log('Balance retrieved successfully');
 			return response;
 		} catch (error) {
-			this.logger.error('Error fetching account information:', error);
+			this.logger.error('Failed to get balance', error.stack);
 			return {
 				success: false,
-				error: error.message || 'Failed to fetch account information',
+				error: error.message || 'Failed to get balance',
 				timestamp: Date.now(),
 			};
 		}
 	}
 
 	/**
-	 * Get position information v3
+	 * Get position risk information
+	 * GET /fapi/v3/positionRisk
 	 */
-	async getPositions(symbol?: string): Promise<AsterApiResponse<any>> {
+	async getPositionRisk(
+		symbol?: string,
+	): Promise<AsterApiResponse<PositionRisk[]>> {
 		try {
-			this.logger.debug('Fetching position information');
-			const params: any = {};
-
-			if (symbol) {
-				params.symbol = symbol;
-			}
-
-			const response = await this.asterApiService.get<any>('/fapi/v3/positionRisk', params);
-
-			if (response.success) {
-				this.logger.log('Successfully fetched position information');
-			}
-
+			const params = symbol ? { symbol } : {};
+			const response = await this.asterApi.get<PositionRisk[]>(
+				'/fapi/v3/positionRisk',
+				params,
+			);
+			this.logger.log(
+				`Position risk retrieved successfully${symbol ? ` for ${symbol}` : ''}`,
+			);
 			return response;
 		} catch (error) {
-			this.logger.error('Error fetching position information:', error);
+			this.logger.error('Failed to get position risk', error.stack);
 			return {
 				success: false,
-				error: error.message || 'Failed to fetch position information',
+				error: error.message || 'Failed to get position risk',
+				timestamp: Date.now(),
+			};
+		}
+	}
+
+	/**
+	 * Get income history
+	 * GET /fapi/v1/income
+	 */
+	async getIncomeHistory(params?: {
+		symbol?: string;
+		incomeType?:
+		| 'TRANSFER'
+		| 'WELCOME_BONUS'
+		| 'REALIZED_PNL'
+		| 'FUNDING_FEE'
+		| 'COMMISSION'
+		| 'INSURANCE_CLEAR'
+		| 'REFERRAL_KICKBACK'
+		| 'COMMISSION_REBATE'
+		| 'API_REBATE'
+		| 'CONTEST_REWARD'
+		| 'CROSS_COLLATERAL_TRANSFER'
+		| 'OPTIONS_PREMIUM_FEE'
+		| 'OPTIONS_SETTLE_PROFIT'
+		| 'INTERNAL_TRANSFER'
+		| 'AUTO_EXCHANGE'
+		| 'DELIVERED_SETTELMENT'
+		| 'COIN_SWAP_DEPOSIT'
+		| 'COIN_SWAP_WITHDRAW'
+		| 'POSITION_LIMIT_INCREASE_FEE';
+		startTime?: number;
+		endTime?: number;
+		limit?: number;
+	}): Promise<AsterApiResponse<IncomeHistory[]>> {
+		try {
+			const response = await this.asterApi.get<IncomeHistory[]>(
+				'/fapi/v1/income',
+				params,
+			);
+			this.logger.log('Income history retrieved successfully');
+			return response;
+		} catch (error) {
+			this.logger.error('Failed to get income history', error.stack);
+			return {
+				success: false,
+				error: error.message || 'Failed to get income history',
 				timestamp: Date.now(),
 			};
 		}

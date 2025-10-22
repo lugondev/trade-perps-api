@@ -34,30 +34,114 @@ export class AsterApiService {
 		this.logger.log(`Aster API Service initialized with base URL: ${this.baseURL}`);
 	}
 
+	/**
+	 * POST with Binance-style HMAC SHA256 signature.
+	 * This bypasses the request interceptors because it uses the global axios instance
+	 * and constructs the form-urlencoded body + signature manually.
+	 */
+	async hmacPost<T = any>(endpoint: string, params: Record<string, any>): Promise<AsterApiResponse<T>> {
+		try {
+			if (!this.credentials.apiKey || !this.credentials.apiSecret) {
+				throw new Error('HMAC API credentials (apiKey/apiSecret) are required');
+			}
+
+			// Build URL-encoded query string preserving insertion order
+			const qs = new URLSearchParams(params as any).toString();
+
+			// Compute HMAC SHA256 signature
+			const signature = require('crypto').createHmac('sha256', this.credentials.apiSecret as string)
+				.update(qs)
+				.digest('hex');
+
+			const body = qs + `&signature=${signature}`;
+
+			const url = this.baseURL + endpoint;
+
+			const response = await axios.post(url, body, {
+				headers: {
+					'Content-Type': 'application/x-www-form-urlencoded',
+					'X-MBX-APIKEY': this.credentials.apiKey,
+					'User-Agent': 'Aster-Trading-Bot/1.0',
+				},
+				timeout: 30000,
+			});
+
+			return this.formatResponse(response.data);
+		} catch (error) {
+			return this.handleError(error);
+		}
+	}
+
 	private setupInterceptors(): void {
 		// Request interceptor for authentication
 		this.httpClient.interceptors.request.use(
 			async (config) => {
+				const endpoint = config.url || '';
+
 				// For endpoints requiring signature
-				if (this.requiresSignature(config.url || '')) {
-					const signatureResult = await this.generateAsterSignature(config);
+				if (this.requiresSignature(endpoint)) {
+					// Check if endpoint uses HMAC (v1) or Wallet signature (v3)
+					if (this.usesHMACSignature(endpoint)) {
+						// HMAC SHA256 signature for /fapi/v1/* endpoints
+						this.logger.debug('Using HMAC SHA256 signature for:', endpoint);
 
-					// CRITICAL: Use the SAME timestamp and recvWindow that were used for signature generation
-					// signatureResult now contains originalParams with the exact values used for signature
-					const signatureParams = {
-						...signatureResult.originalParams, // Contains timestamp and recvWindow as numbers
-						user: signatureResult.user,
-						signer: signatureResult.signer,
-						nonce: signatureResult.nonce,
-						signature: signatureResult.signature,
-					};
+						// Get params (merge query params and body data)
+						const allParams = {
+							...(config.params || {}),
+							...(config.data || {}),
+						};
 
-					// Add signature parameters to the request
-					// MERGE with existing params instead of replacing to preserve business parameters
-					if (config.method?.toLowerCase() === 'post') {
-						config.data = { ...config.data, ...signatureParams }; // Merge with existing data
+						// Add timestamp if not present
+						if (!allParams.timestamp) {
+							allParams.timestamp = Date.now();
+						}
+						if (!allParams.recvWindow) {
+							allParams.recvWindow = 50000;
+						}
+
+						// Generate HMAC signature
+						const queryString = new URLSearchParams(allParams).toString();
+						const signature = require('crypto')
+							.createHmac('sha256', this.credentials.apiSecret)
+							.update(queryString)
+							.digest('hex');
+
+						this.logger.debug('HMAC Query String:', queryString);
+						this.logger.debug('HMAC Signature:', signature);
+
+						// Add signature and API key
+						allParams.signature = signature;
+
+						// Set API key header
+						config.headers['X-MBX-APIKEY'] = this.credentials.apiKey;
+
+						// Update config with signed params
+						if (config.method?.toLowerCase() === 'post') {
+							config.data = allParams;
+						} else {
+							config.params = allParams;
+						}
 					} else {
-						config.params = { ...config.params, ...signatureParams }; // Merge with existing params
+						// Ethereum wallet signature for /fapi/v3/* endpoints
+						this.logger.debug('Using Ethereum wallet signature for:', endpoint);
+
+						const signatureResult = await this.generateAsterSignature(config);
+
+						// CRITICAL: Use the SAME timestamp and recvWindow that were used for signature generation
+						const signatureParams = {
+							...signatureResult.originalParams,
+							user: signatureResult.user,
+							signer: signatureResult.signer,
+							nonce: signatureResult.nonce,
+							signature: signatureResult.signature,
+						};
+
+						// MERGE with existing params
+						if (config.method?.toLowerCase() === 'post') {
+							config.data = { ...config.data, ...signatureParams };
+						} else {
+							config.params = { ...config.params, ...signatureParams };
+						}
 					}
 				}
 
@@ -99,6 +183,7 @@ export class AsterApiService {
 			'/fapi/v3/order',
 			'/fapi/v3/balance',
 			'/fapi/v3/account',
+			'/fapi/v3/leverage',
 			'/fapi/v1/order',
 			'/fapi/v1/allOrders',
 			'/fapi/v1/openOrders',
@@ -112,6 +197,28 @@ export class AsterApiService {
 		];
 
 		return signatureEndpoints.some(sigEndpoint => endpoint.includes(sigEndpoint));
+	}
+
+	private usesHMACSignature(endpoint: string): boolean {
+		// /fapi/v1/* endpoints use HMAC SHA256 with API key/secret
+		// /fapi/v3/* endpoints use Ethereum wallet signature
+
+		// Extract pathname from endpoint (handle full URL or relative path)
+		try {
+			// If endpoint is absolute URL, parse it
+			if (endpoint.startsWith('http://') || endpoint.startsWith('https://')) {
+				const url = new URL(endpoint);
+				return url.pathname.startsWith('/fapi/v1/');
+			}
+
+			// If relative path, remove query string and check
+			const pathname = endpoint.split('?')[0];
+			return pathname.startsWith('/fapi/v1/');
+		} catch (error) {
+			// Fallback to simple includes check if parsing fails
+			this.logger.warn(`Failed to parse endpoint for HMAC check: ${endpoint}`, error);
+			return endpoint.includes('/fapi/v1/');
+		}
 	}
 
 	private async generateAsterSignature(config: AxiosRequestConfig): Promise<AsterSignatureParams> {

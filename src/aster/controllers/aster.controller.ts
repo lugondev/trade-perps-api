@@ -35,14 +35,19 @@ export class AsterController {
 	@ApiOperation({ summary: 'Get account balances' })
 	@ApiResponse({ status: 200, description: 'Account balances retrieved successfully' })
 	async getBalances() {
-		return this.balanceService.getBalances();
+		return this.balanceService.getBalance();
 	}
 
 	@Get('balance/non-zero')
 	@ApiOperation({ summary: 'Get non-zero balances only' })
 	@ApiResponse({ status: 200, description: 'Non-zero balances retrieved successfully' })
 	async getNonZeroBalances() {
-		return this.balanceService.getNonZeroBalances();
+		const result = await this.balanceService.getBalance();
+		if (result.success && result.data) {
+			const nonZeroBalances = result.data.filter(balance => parseFloat(balance.total) > 0);
+			return { ...result, data: nonZeroBalances };
+		}
+		return result;
 	}
 
 	@Get('balance/:asset')
@@ -50,14 +55,39 @@ export class AsterController {
 	@ApiParam({ name: 'asset', description: 'Asset symbol (e.g., BTC, USDT)' })
 	@ApiResponse({ status: 200, description: 'Asset balance retrieved successfully' })
 	async getBalance(@Param('asset') asset: string) {
-		return this.balanceService.getBalance(asset);
+		const result = await this.balanceService.getBalance();
+		if (result.success && result.data) {
+			const assetBalance = result.data.find(balance => balance.asset === asset);
+			if (assetBalance) {
+				return { ...result, data: assetBalance };
+			}
+			return {
+				success: false,
+				error: `Asset ${asset} not found`,
+				timestamp: Date.now(),
+			};
+		}
+		return result;
 	}
 
 	@Get('portfolio/value')
 	@ApiOperation({ summary: 'Get total portfolio value' })
 	@ApiResponse({ status: 200, description: 'Portfolio value retrieved successfully' })
 	async getPortfolioValue() {
-		return this.balanceService.getPortfolioValue();
+		const accountInfo = await this.balanceService.getAccountInfo();
+		if (accountInfo.success && accountInfo.data) {
+			return {
+				success: true,
+				data: {
+					totalWalletBalance: accountInfo.data.totalWalletBalance,
+					totalUnrealizedProfit: accountInfo.data.totalUnrealizedProfit,
+					totalMarginBalance: accountInfo.data.totalMarginBalance,
+					availableBalance: accountInfo.data.availableBalance,
+				},
+				timestamp: Date.now(),
+			};
+		}
+		return accountInfo;
 	}
 
 	@Get('account/info')
@@ -72,7 +102,7 @@ export class AsterController {
 	@ApiQuery({ name: 'symbol', description: 'Trading symbol (optional)', required: false })
 	@ApiResponse({ status: 200, description: 'Position information retrieved successfully' })
 	async getPositions(@Query('symbol') symbol?: string) {
-		return this.balanceService.getPositions(symbol);
+		return this.balanceService.getPositionRisk(symbol);
 	}
 
 	// Trading endpoints
@@ -207,6 +237,35 @@ export class AsterController {
 		return this.tradingService.limitSell(body.symbol, body.quantity, body.price, body.clientOrderId);
 	}
 
+	// Leverage setting endpoint
+	@Post('leverage')
+	@ApiOperation({ summary: 'Set leverage for a specific symbol' })
+	@ApiBody({
+		schema: {
+			type: 'object',
+			properties: {
+				symbol: { type: 'string', example: 'BTCUSDT', description: 'Trading pair symbol' },
+				leverage: { type: 'number', example: 10, minimum: 1, maximum: 125, description: 'Leverage multiplier (1-125)' }
+			},
+			required: ['symbol', 'leverage']
+		}
+	})
+	@ApiResponse({
+		status: 200,
+		description: 'Leverage set successfully',
+		schema: {
+			type: 'object',
+			properties: {
+				success: { type: 'boolean' },
+				data: { type: 'object' },
+				timestamp: { type: 'number' }
+			}
+		}
+	})
+	async setLeverage(@Body() body: { symbol: string; leverage: number }) {
+		return this.tradingService.setLeverage(body.symbol, body.leverage);
+	}
+
 	// Quick position endpoints with risk management
 	@Post('orders/quick-long')
 	@ApiOperation({ summary: 'Quick LONG position with current market price and auto SL/TP' })
@@ -217,13 +276,14 @@ export class AsterController {
 				symbol: { type: 'string', example: 'BTCUSDT', description: 'Trading pair symbol' },
 				usdtValue: { type: 'number', example: 100, description: 'Amount in USDT to long' },
 				stopLossPercent: { type: 'number', example: 15, description: 'Stop loss percentage (default: 15%)' },
-				takeProfitPercent: { type: 'number', example: 15, description: 'Take profit percentage (default: 15%)' }
+				takeProfitPercent: { type: 'number', example: 15, description: 'Take profit percentage (default: 15%)' },
+				leverage: { type: 'number', example: 10, description: 'Leverage multiplier (default: 10x)' }
 			},
 			required: ['symbol', 'usdtValue']
 		}
 	})
-	@ApiResponse({ 
-		status: 201, 
+	@ApiResponse({
+		status: 201,
 		description: 'Quick LONG position placed with stop loss and take profit orders',
 		schema: {
 			type: 'object',
@@ -242,18 +302,20 @@ export class AsterController {
 		}
 	})
 	async quickLong(
-		@Body() body: { 
-			symbol: string; 
-			usdtValue: number; 
-			stopLossPercent?: number; 
-			takeProfitPercent?: number 
+		@Body() body: {
+			symbol: string;
+			usdtValue: number;
+			stopLossPercent?: number;
+			takeProfitPercent?: number;
+			leverage?: number;
 		}
 	) {
 		return this.tradingService.quickLong(
 			body.symbol,
 			body.usdtValue,
-			body.stopLossPercent,
-			body.takeProfitPercent
+			body.stopLossPercent ?? 15,
+			body.takeProfitPercent ?? 15,
+			body.leverage ?? 10
 		);
 	}
 
@@ -266,13 +328,14 @@ export class AsterController {
 				symbol: { type: 'string', example: 'BTCUSDT', description: 'Trading pair symbol' },
 				usdtValue: { type: 'number', example: 100, description: 'Amount in USDT to short' },
 				stopLossPercent: { type: 'number', example: 15, description: 'Stop loss percentage (default: 15%)' },
-				takeProfitPercent: { type: 'number', example: 15, description: 'Take profit percentage (default: 15%)' }
+				takeProfitPercent: { type: 'number', example: 15, description: 'Take profit percentage (default: 15%)' },
+				leverage: { type: 'number', example: 10, description: 'Leverage multiplier (default: 10x)' }
 			},
 			required: ['symbol', 'usdtValue']
 		}
 	})
-	@ApiResponse({ 
-		status: 201, 
+	@ApiResponse({
+		status: 201,
 		description: 'Quick SHORT position placed with stop loss and take profit orders',
 		schema: {
 			type: 'object',
@@ -291,18 +354,20 @@ export class AsterController {
 		}
 	})
 	async quickShort(
-		@Body() body: { 
-			symbol: string; 
-			usdtValue: number; 
-			stopLossPercent?: number; 
-			takeProfitPercent?: number 
+		@Body() body: {
+			symbol: string;
+			usdtValue: number;
+			stopLossPercent?: number;
+			takeProfitPercent?: number;
+			leverage?: number;
 		}
 	) {
 		return this.tradingService.quickShort(
 			body.symbol,
 			body.usdtValue,
-			body.stopLossPercent,
-			body.takeProfitPercent
+			body.stopLossPercent ?? 15,
+			body.takeProfitPercent ?? 15,
+			body.leverage ?? 10
 		);
 	}
 

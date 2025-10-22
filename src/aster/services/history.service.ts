@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { AsterApiService } from './aster-api.service';
-import { Trade, Order, TradeHistory, OrderHistory, AsterApiResponse } from '../types';
+import { Trade, Order, AsterApiResponse } from '../types';
 
 @Injectable()
 export class HistoryService {
@@ -9,31 +9,35 @@ export class HistoryService {
 	constructor(private readonly asterApiService: AsterApiService) { }
 
 	/**
-	 * Get trade history with pagination
+	 * Get account trade list (Account Trade List USER_DATA)
+	 * If startTime and endTime are both not sent, then the last 7 days' data will be returned
+	 * The time between startTime and endTime cannot be longer than 7 days
 	 */
 	async getTradeHistory(
-		symbol?: string,
-		limit: number = 100,
-		page: number = 1,
+		symbol: string,
 		startTime?: number,
 		endTime?: number,
-	): Promise<AsterApiResponse<TradeHistory>> {
+		fromId?: number,
+		limit: number = 500,
+	): Promise<AsterApiResponse<Trade[]>> {
 		try {
-			this.logger.debug(`Fetching trade history - Symbol: ${symbol}, Page: ${page}, Limit: ${limit}`);
+			this.logger.debug(`Fetching trade history - Symbol: ${symbol}, Limit: ${limit}`);
 
 			const params: any = {
+				symbol,
+				timestamp: Date.now(),
+				recvWindow: 50000,
 				limit,
-				page,
 			};
 
-			if (symbol) params.symbol = symbol;
 			if (startTime) params.startTime = startTime;
 			if (endTime) params.endTime = endTime;
+			if (fromId) params.fromId = fromId;
 
-			const response = await this.asterApiService.get<TradeHistory>('/api/v1/trades/history', params);
+			const response = await this.asterApiService.get<Trade[]>('/fapi/v1/userTrades', params);
 
 			if (response.success && response.data) {
-				this.logger.log(`Successfully fetched ${response.data.trades?.length || 0} trades`);
+				this.logger.log(`Successfully fetched ${response.data.length} trades`);
 			}
 
 			return response;
@@ -48,31 +52,36 @@ export class HistoryService {
 	}
 
 	/**
-	 * Get order history with pagination
+	 * Get all orders (All Orders USER_DATA)
+	 * Get all account orders; active, canceled, or filled
+	 * If orderId is set, it will get orders >= that orderId. Otherwise most recent orders are returned
+	 * The query time period must be less than 7 days (default as the recent 7 days)
 	 */
 	async getOrderHistory(
-		symbol?: string,
-		limit: number = 100,
-		page: number = 1,
+		symbol: string,
+		orderId?: number,
 		startTime?: number,
 		endTime?: number,
-	): Promise<AsterApiResponse<OrderHistory>> {
+		limit: number = 500,
+	): Promise<AsterApiResponse<Order[]>> {
 		try {
-			this.logger.debug(`Fetching order history - Symbol: ${symbol}, Page: ${page}, Limit: ${limit}`);
+			this.logger.debug(`Fetching order history - Symbol: ${symbol}, Limit: ${limit}`);
 
 			const params: any = {
+				symbol,
+				timestamp: Date.now(),
+				recvWindow: 50000,
 				limit,
-				page,
 			};
 
-			if (symbol) params.symbol = symbol;
+			if (orderId) params.orderId = orderId;
 			if (startTime) params.startTime = startTime;
 			if (endTime) params.endTime = endTime;
 
-			const response = await this.asterApiService.get<OrderHistory>('/api/v1/orders/history', params);
+			const response = await this.asterApiService.get<Order[]>('/fapi/v1/allOrders', params);
 
 			if (response.success && response.data) {
-				this.logger.log(`Successfully fetched ${response.data.orders?.length || 0} orders`);
+				this.logger.log(`Successfully fetched ${response.data.length} orders`);
 			}
 
 			return response;
@@ -87,27 +96,91 @@ export class HistoryService {
 	}
 
 	/**
+	 * Get all open orders (Current All Open Orders USER_DATA)
+	 * If the symbol is not sent, orders for all symbols will be returned in an array
+	 */
+	async getOpenOrders(symbol?: string): Promise<AsterApiResponse<Order[]>> {
+		try {
+			this.logger.debug(`Fetching open orders${symbol ? ` for ${symbol}` : ''}`);
+
+			const params: any = {
+				timestamp: Date.now(),
+				recvWindow: 50000,
+			};
+
+			if (symbol) params.symbol = symbol;
+
+			const response = await this.asterApiService.get<Order[]>('/fapi/v1/openOrders', params);
+
+			if (response.success && response.data) {
+				this.logger.log(`Successfully fetched ${response.data.length} open orders`);
+			}
+
+			return response;
+		} catch (error) {
+			this.logger.error('Error fetching open orders:', error);
+			return {
+				success: false,
+				error: error.message || 'Failed to fetch open orders',
+				timestamp: Date.now(),
+			};
+		}
+	}
+
+	/**
+	 * Get income history (Get Income History USER_DATA)
+	 * If neither startTime nor endTime is sent, the recent 7-day data will be returned
+	 * If incomeType is not sent, all kinds of flow will be returned
+	 * incomeType: TRANSFER, WELCOME_BONUS, REALIZED_PNL, FUNDING_FEE, COMMISSION, INSURANCE_CLEAR, MARKET_MERCHANT_RETURN_REWARD
+	 */
+	async getIncomeHistory(
+		symbol?: string,
+		incomeType?: string,
+		startTime?: number,
+		endTime?: number,
+		limit: number = 100,
+	): Promise<AsterApiResponse<any[]>> {
+		try {
+			this.logger.debug(`Fetching income history`);
+
+			const params: any = {
+				timestamp: Date.now(),
+				recvWindow: 50000,
+				limit,
+			};
+
+			if (symbol) params.symbol = symbol;
+			if (incomeType) params.incomeType = incomeType;
+			if (startTime) params.startTime = startTime;
+			if (endTime) params.endTime = endTime;
+
+			const response = await this.asterApiService.get<any[]>('/fapi/v1/income', params);
+
+			if (response.success && response.data) {
+				this.logger.log(`Successfully fetched ${response.data.length} income records`);
+			}
+
+			return response;
+		} catch (error) {
+			this.logger.error('Error fetching income history:', error);
+			return {
+				success: false,
+				error: error.message || 'Failed to fetch income history',
+				timestamp: Date.now(),
+			};
+		}
+	}
+
+	/**
 	 * Get recent trades for a specific symbol
 	 */
 	async getRecentTrades(symbol: string, limit: number = 50): Promise<AsterApiResponse<Trade[]>> {
 		try {
 			this.logger.debug(`Fetching recent trades for ${symbol}`);
 
-			const response = await this.getTradeHistory(symbol, limit, 1);
+			const response = await this.getTradeHistory(symbol, undefined, undefined, undefined, limit);
 
-			if (response.success && response.data) {
-				return {
-					success: true,
-					data: response.data.trades,
-					timestamp: Date.now(),
-				};
-			}
-
-			return {
-				success: false,
-				error: response.error || 'Failed to fetch recent trades',
-				timestamp: Date.now(),
-			};
+			return response;
 		} catch (error) {
 			this.logger.error(`Error fetching recent trades for ${symbol}:`, error);
 			return {
@@ -119,44 +192,30 @@ export class HistoryService {
 	}
 
 	/**
-	 * Get trades for a specific time period
+	 * Get trades for a specific time period (max 7 days)
 	 */
 	async getTradesInPeriod(
 		symbol: string,
 		startTime: number,
 		endTime: number,
+		limit: number = 1000,
 	): Promise<AsterApiResponse<Trade[]>> {
 		try {
 			this.logger.debug(`Fetching trades for ${symbol} from ${new Date(startTime)} to ${new Date(endTime)}`);
 
-			let allTrades: Trade[] = [];
-			let page = 1;
-			const limit = 100;
-			let hasMoreData = true;
-
-			while (hasMoreData) {
-				const response = await this.getTradeHistory(symbol, limit, page, startTime, endTime);
-
-				if (!response.success || !response.data) {
-					return {
-						success: false,
-						error: response.error || 'Failed to fetch trades',
-						timestamp: Date.now(),
-					};
-				}
-
-				allTrades = allTrades.concat(response.data.trades);
-
-				// Check if we have more data
-				hasMoreData = response.data.trades.length === limit;
-				page++;
+			// Ensure we don't exceed 7 days
+			const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+			if (endTime - startTime > sevenDaysMs) {
+				return {
+					success: false,
+					error: 'Time range cannot exceed 7 days',
+					timestamp: Date.now(),
+				};
 			}
 
-			return {
-				success: true,
-				data: allTrades,
-				timestamp: Date.now(),
-			};
+			const response = await this.getTradeHistory(symbol, startTime, endTime, undefined, limit);
+
+			return response;
 		} catch (error) {
 			this.logger.error(`Error fetching trades in period for ${symbol}:`, error);
 			return {
@@ -170,10 +229,12 @@ export class HistoryService {
 	/**
 	 * Get trading statistics for a symbol
 	 */
-	async getTradingStats(symbol: string, days: number = 30): Promise<AsterApiResponse<any>> {
+	async getTradingStats(symbol: string, days: number = 7): Promise<AsterApiResponse<any>> {
 		try {
+			// Limit to max 7 days as per API constraints
+			const actualDays = Math.min(days, 7);
 			const endTime = Date.now();
-			const startTime = endTime - (days * 24 * 60 * 60 * 1000);
+			const startTime = endTime - (actualDays * 24 * 60 * 60 * 1000);
 
 			const tradesResponse = await this.getTradesInPeriod(symbol, startTime, endTime);
 
@@ -188,7 +249,7 @@ export class HistoryService {
 				success: true,
 				data: {
 					symbol,
-					period: `${days} days`,
+					period: `${actualDays} days`,
 					...stats,
 				},
 				timestamp: Date.now(),
@@ -225,9 +286,9 @@ export class HistoryService {
 		let sellTrades = 0;
 
 		trades.forEach(trade => {
-			const quantity = parseFloat(trade.quantity);
-			const price = parseFloat(trade.price);
-			const fee = parseFloat(trade.fee);
+			const quantity = parseFloat(trade.qty || trade.quantity || '0');
+			const price = parseFloat(trade.price || '0');
+			const fee = parseFloat(trade.commission || '0');
 
 			totalVolume += quantity;
 			totalFees += fee;
@@ -254,34 +315,31 @@ export class HistoryService {
 	}
 
 	/**
-	 * Get P&L for a specific period
+	 * Get P&L for a specific period (max 7 days)
 	 */
-	async getPnL(symbol?: string, days: number = 30): Promise<AsterApiResponse<any>> {
+	async getPnL(symbol: string, days: number = 7): Promise<AsterApiResponse<any>> {
 		try {
-			this.logger.debug(`Calculating P&L${symbol ? ` for ${symbol}` : ''} over ${days} days`);
+			this.logger.debug(`Calculating P&L for ${symbol} over ${days} days`);
 
+			// Limit to max 7 days
+			const actualDays = Math.min(days, 7);
 			const endTime = Date.now();
-			const startTime = endTime - (days * 24 * 60 * 60 * 1000);
+			const startTime = endTime - (actualDays * 24 * 60 * 60 * 1000);
 
-			const tradesResponse = symbol
-				? await this.getTradesInPeriod(symbol, startTime, endTime)
-				: await this.getTradeHistory(undefined, 1000, 1, startTime, endTime);
+			const tradesResponse = await this.getTradesInPeriod(symbol, startTime, endTime);
 
-			if (!tradesResponse.success) {
+			if (!tradesResponse.success || !tradesResponse.data) {
 				return tradesResponse;
 			}
 
-			const trades = Array.isArray(tradesResponse.data)
-				? tradesResponse.data
-				: tradesResponse.data?.trades || [];
-
+			const trades = tradesResponse.data;
 			const pnl = this.calculatePnL(trades);
 
 			return {
 				success: true,
 				data: {
-					symbol: symbol || 'ALL',
-					period: `${days} days`,
+					symbol,
+					period: `${actualDays} days`,
 					...pnl,
 				},
 				timestamp: Date.now(),
@@ -300,20 +358,25 @@ export class HistoryService {
 	 * Calculate P&L from trades
 	 */
 	private calculatePnL(trades: Trade[]): any {
-		// This is a simplified P&L calculation
-		// In practice, you'd need more sophisticated tracking of positions
-
 		let realizedPnL = 0;
 		let totalFees = 0;
 
 		trades.forEach(trade => {
-			const value = parseFloat(trade.quantity) * parseFloat(trade.price);
-			const fee = parseFloat(trade.fee);
+			const quantity = parseFloat(trade.qty || trade.quantity || '0');
+			const price = parseFloat(trade.price || '0');
+			const fee = parseFloat(trade.commission || '0');
+			const tradePnl = parseFloat(trade.realizedPnl || '0');
 
-			if (trade.side === 'SELL') {
-				realizedPnL += value;
+			// Use realizedPnl if available, otherwise calculate from price
+			if (tradePnl !== 0) {
+				realizedPnL += tradePnl;
 			} else {
-				realizedPnL -= value;
+				const value = quantity * price;
+				if (trade.side === 'SELL') {
+					realizedPnL += value;
+				} else {
+					realizedPnL -= value;
+				}
 			}
 
 			totalFees += fee;
@@ -332,16 +395,15 @@ export class HistoryService {
 	/**
 	 * Export trade history to CSV format
 	 */
-	async exportTradeHistoryCSV(symbol?: string, days: number = 30): Promise<AsterApiResponse<string>> {
+	async exportTradeHistoryCSV(symbol: string, days: number = 7): Promise<AsterApiResponse<string>> {
 		try {
+			const actualDays = Math.min(days, 7);
 			const endTime = Date.now();
-			const startTime = endTime - (days * 24 * 60 * 60 * 1000);
+			const startTime = endTime - (actualDays * 24 * 60 * 60 * 1000);
 
-			const tradesResponse = symbol
-				? await this.getTradesInPeriod(symbol, startTime, endTime)
-				: await this.getTradeHistory(undefined, 1000, 1, startTime, endTime);
+			const tradesResponse = await this.getTradesInPeriod(symbol, startTime, endTime);
 
-			if (!tradesResponse.success) {
+			if (!tradesResponse.success || !tradesResponse.data) {
 				return {
 					success: false,
 					error: tradesResponse.error || 'Failed to fetch trades',
@@ -349,10 +411,7 @@ export class HistoryService {
 				};
 			}
 
-			const trades = Array.isArray(tradesResponse.data)
-				? tradesResponse.data
-				: tradesResponse.data?.trades || [];
-
+			const trades = tradesResponse.data;
 			const csv = this.convertTradesToCSV(trades);
 
 			return {
@@ -378,12 +437,26 @@ export class HistoryService {
 			return 'No trades found';
 		}
 
-		const headers = 'ID,OrderID,Symbol,Side,Quantity,Price,Fee,FeeAsset,Timestamp,Date';
-		const rows = trades.map(trade => {
-			const date = new Date(trade.timestamp).toISOString();
-			return `${trade.id},${trade.orderId},${trade.symbol},${trade.side},${trade.quantity},${trade.price},${trade.fee},${trade.feeAsset},${trade.timestamp},${date}`;
+		// CSV header
+		const headers = ['Time', 'Symbol', 'Side', 'Price', 'Quantity', 'Quote Qty', 'Commission', 'Realized PnL', 'Trade ID'];
+		const rows = [headers.join(',')];
+
+		// CSV rows
+		trades.forEach(trade => {
+			const row = [
+				new Date(trade.time).toISOString(),
+				trade.symbol,
+				trade.side,
+				trade.price,
+				trade.qty || trade.quantity,
+				trade.quoteQty,
+				trade.commission,
+				trade.realizedPnl || '0',
+				trade.id,
+			];
+			rows.push(row.join(','));
 		});
 
-		return [headers, ...rows].join('\n');
+		return rows.join('\n');
 	}
 }
