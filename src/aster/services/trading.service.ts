@@ -376,7 +376,7 @@ export class TradingService {
 	 */
 	async setLeverage(symbol: string, leverage: number): Promise<AsterApiResponse<any>> {
 		try {
-			this.logger.log(`⚙️ Setting leverage for ${symbol} to ${leverage}x`);
+			this.logger.debug(`⚙️ Setting leverage for ${symbol} to ${leverage}x`);
 
 			// Validate leverage range
 			if (leverage < 1 || leverage > 125) {
@@ -390,22 +390,31 @@ export class TradingService {
 			// Call Aster API v1 endpoint with HMAC signature (use hmacPost)
 			const params = {
 				symbol,
-				leverage,
-				recvWindow: 50000,
+				leverage: leverage.toString(), // Ensure it's a string
 				timestamp: Date.now(),
+				recvWindow: 50000,
 			};
+
+			this.logger.debug(`Leverage params:`, params);
 
 			const response = await this.asterApiService.hmacPost('/fapi/v1/leverage', params);
 
 			if (response.success) {
-				this.logger.log(`✅ Leverage set successfully for ${symbol}: ${leverage}x`);
+				this.logger.log(`✅ Leverage set successfully: ${symbol} = ${leverage}x`);
 			} else {
-				this.logger.error(`❌ Failed to set leverage for ${symbol}:`, response.error);
+				this.logger.warn(`⚠️ Leverage set failed for ${symbol}: ${response.error}`);
+				// Log detailed error for debugging
+				if (response.data) {
+					this.logger.debug('Leverage error details:', JSON.stringify(response.data));
+				}
 			}
 
 			return response;
 		} catch (error) {
-			this.logger.error('Error setting leverage:', error);
+			this.logger.error('❌ Error setting leverage:', error.message || error);
+			if (error.response?.data) {
+				this.logger.debug('Error response data:', JSON.stringify(error.response.data));
+			}
 			return {
 				success: false,
 				error: error.message || 'Failed to set leverage',
@@ -463,8 +472,12 @@ export class TradingService {
 	 * Quick Long position with current market price
 	 * @param symbol Trading pair symbol (e.g., BTCUSDT)
 	 * @param usdtValue Value in USDT to long
-	 * @param stopLossPercent Stop loss percentage (default 15%)
-	 * @param takeProfitPercent Take profit percentage (default 15%)
+	 * @param stopLossPercent Stop loss percentage based on account balance (default 15%)
+	 *                        Note: This will be adjusted by leverage. With 10x leverage,
+	 *                        15% SL = 1.5% price movement to lose 15% of account
+	 * @param takeProfitPercent Take profit percentage based on account balance (default 15%)
+	 *                          Note: This will be adjusted by leverage. With 10x leverage,
+	 *                          15% TP = 1.5% price movement to gain 15% of account
 	 * @param leverage Leverage multiplier (default 10x)
 	 */
 	async quickLong(
@@ -512,99 +525,88 @@ export class TradingService {
 				};
 			}
 
-			// Place market buy order (LONG)
-			// Note: Not using positionSide for One-Way position mode compatibility
-			const mainOrderRequest: any = {
-				symbol,
-				side: 'BUY',
-				type: 'MARKET',
-				quantity,
-				newClientOrderId: this.generateClientOrderId(),
-				timestamp: Date.now(),
-				recvWindow: 50000,
-			};
+			// Set leverage BEFORE placing orders (critical!)
+			try {
+				const levResp = await this.setLeverage(symbol, leverage);
+				if (!levResp.success) {
+					this.logger.warn(`⚠️ Leverage set failed: ${levResp.error} - continuing with existing leverage`);
+				} else {
+					this.logger.log(`✅ Leverage set to ${leverage}x for ${symbol}`);
+				}
+			} catch (e) {
+				this.logger.warn('⚠️ Error setting leverage (continuing):', e.message || e);
+			}
 
-			const mainOrder = await this.asterApiService.post<Order>('/fapi/v3/order', mainOrderRequest);
-			if (!mainOrder.success) {
-				this.logger.error('Failed to place main order:', mainOrder.error);
+			// Calculate stop loss and take profit prices BEFORE placing orders
+			// IMPORTANT: Adjust SL/TP by leverage to get actual account P&L percentage
+			// Example: 15% SL with 10x leverage = 1.5% price movement = 15% account loss
+			const priceMovementSL = stopLossPercent / leverage;
+			const priceMovementTP = takeProfitPercent / leverage;
+
+			// Use higher precision for small price movements to avoid rounding issues
+			const precision = currentPrice < 1 ? 6 : currentPrice < 10 ? 4 : 2;
+			const stopLossPrice = (currentPrice * (1 - priceMovementSL / 100)).toFixed(precision);
+			const takeProfitPrice = (currentPrice * (1 + priceMovementTP / 100)).toFixed(precision);
+
+			this.logger.debug(`SL/TP adjusted by ${leverage}x leverage: Price SL movement: ${priceMovementSL.toFixed(2)}%, Price TP movement: ${priceMovementTP.toFixed(2)}%`);
+			this.logger.debug(`Current Price: ${currentPrice}, SL Price: ${stopLossPrice}, TP Price: ${takeProfitPrice}`);
+
+			// Batch ALL 3 orders: Main LONG + Stop Loss + Take Profit
+			const allOrders: OrderRequest[] = [
+				{
+					symbol,
+					side: 'BUY',
+					type: 'MARKET',
+					quantity,
+					newClientOrderId: this.generateClientOrderId(),
+				},
+				{
+					symbol,
+					side: 'SELL',
+					type: 'STOP_MARKET',
+					stopPrice: stopLossPrice,
+					closePosition: 'true',
+					workingType: 'CONTRACT_PRICE',
+					newClientOrderId: this.generateClientOrderId(),
+				},
+				{
+					symbol,
+					side: 'SELL',
+					type: 'TAKE_PROFIT_MARKET',
+					stopPrice: takeProfitPrice,
+					closePosition: 'true',
+					workingType: 'CONTRACT_PRICE',
+					newClientOrderId: this.generateClientOrderId(),
+				},
+			];
+
+			const batchResult = await this.batchOrders(allOrders);
+
+			if (!batchResult.success || !Array.isArray(batchResult.data) || batchResult.data.length < 3) {
+				this.logger.error('❌ Batch orders failed:', batchResult.error);
 				return {
 					success: false,
-					error: mainOrder.error || 'Failed to place main order',
-					data: mainOrder.data as any, // Return error details from Aster API
+					error: batchResult.error || 'Failed to place batch orders',
+					data: batchResult.data as any,
 					timestamp: Date.now(),
 				};
 			}
 
-			// Log full response to debug
-			this.logger.debug('Main order response:', JSON.stringify(mainOrder.data));
+			const mainOrder = batchResult.data[0];
+			const stopLossOrder = batchResult.data[1];
+			const takeProfitOrder = batchResult.data[2];
 
-			// Get executed quantity from main order - prioritize origQty as executedQty may be 0 initially
-			const orderData = mainOrder.data as any;
-			const executedQty = mainOrder.data?.origQty || mainOrder.data?.executedQty || orderData?.qty || quantity;
+			this.logger.log(`✅ All 3 orders placed in batch: Main=${mainOrder.orderId}, SL=${stopLossOrder.orderId}, TP=${takeProfitOrder.orderId}`);
 
-			this.logger.log(`Main order placed with quantity: ${executedQty} (status: ${mainOrder.data?.status}, origQty: ${mainOrder.data?.origQty}, executedQty: ${mainOrder.data?.executedQty})`);
-
-			// After placing main order, attempt to set user's leverage on exchange (non-blocking)
-			try {
-				const levResp = await this.setLeverage(symbol, leverage);
-				if (!levResp.success) {
-					this.logger.warn(`Leverage set attempt failed after main order: ${levResp.error}`);
-				} else {
-					this.logger.log(`Leverage set after main order: ${leverage}x for ${symbol}`);
-				}
-			} catch (e) {
-				this.logger.warn('Error while setting leverage after main order (continuing):', e.message || e);
-			}
-
-			// Calculate stop loss and take profit prices
-			const stopLossPrice = (currentPrice * (1 - stopLossPercent / 100)).toFixed(2);
-			const takeProfitPrice = (currentPrice * (1 + takeProfitPercent / 100)).toFixed(2);
-
-			this.logger.debug(`SL Price: ${stopLossPrice}, TP Price: ${takeProfitPrice}`);
-
-		// Use batch orders to place SL and TP in one request (optimized - 2 requests → 1)
-		const slTpOrders: OrderRequest[] = [
-			{
-				symbol,
-				side: 'SELL',
-				type: 'STOP_MARKET',
-				stopPrice: stopLossPrice,
-				closePosition: 'true',
-				workingType: 'CONTRACT_PRICE',
-				newClientOrderId: this.generateClientOrderId(),
-			},
-			{
-				symbol,
-				side: 'SELL',
-				type: 'TAKE_PROFIT_MARKET',
-				stopPrice: takeProfitPrice,
-				closePosition: 'true',
-				workingType: 'CONTRACT_PRICE',
-				newClientOrderId: this.generateClientOrderId(),
-			},
-		];
-
-		const batchResult = await this.batchOrders(slTpOrders);
-		let stopLossOrder, takeProfitOrder;
-		if (batchResult.success && batchResult.data) {
-			stopLossOrder = { success: true, data: batchResult.data[0], timestamp: Date.now() };
-			takeProfitOrder = { success: true, data: batchResult.data[1], timestamp: Date.now() };
-			this.logger.log('✅ Batch orders (SL + TP) placed successfully');
-		} else {
-			this.logger.error('❌ Batch orders failed:', batchResult.error);
-			stopLossOrder = { success: false, error: batchResult.error, timestamp: Date.now() };
-			takeProfitOrder = { success: false, error: batchResult.error, timestamp: Date.now() };
-		}
-
-		return {
-			success: true,
-			data: {
-				mainOrder: mainOrder.data,
-				stopLoss: stopLossOrder.success ? stopLossOrder.data : undefined,
-				takeProfit: takeProfitOrder.success ? takeProfitOrder.data : undefined,
-			},
-			timestamp: Date.now(),
-		};
+			return {
+				success: true,
+				data: {
+					mainOrder,
+					stopLoss: stopLossOrder,
+					takeProfit: takeProfitOrder,
+				},
+				timestamp: Date.now(),
+			};
 		} catch (error) {
 			this.logger.error('Error in quick long:', error);
 			return {
@@ -620,8 +622,12 @@ export class TradingService {
 	 * Quick Short position with current market price
 	 * @param symbol Trading pair symbol (e.g., BTCUSDT)
 	 * @param usdtValue Value in USDT to short
-	 * @param stopLossPercent Stop loss percentage (default 15%)
-	 * @param takeProfitPercent Take profit percentage (default 15%)
+	 * @param stopLossPercent Stop loss percentage based on account balance (default 15%)
+	 *                        Note: This will be adjusted by leverage. With 10x leverage,
+	 *                        15% SL = 1.5% price movement to lose 15% of account
+	 * @param takeProfitPercent Take profit percentage based on account balance (default 15%)
+	 *                          Note: This will be adjusted by leverage. With 10x leverage,
+	 *                          15% TP = 1.5% price movement to gain 15% of account
 	 * @param leverage Leverage multiplier (default 10x)
 	 */
 	async quickShort(
@@ -669,63 +675,47 @@ export class TradingService {
 				};
 			}
 
-			// Place market sell order (SHORT)
-			// Note: Not using positionSide for One-Way position mode compatibility
-			const mainOrderRequest: any = {
-				symbol,
-				side: 'SELL',
-				type: 'MARKET',
-				quantity,
-				newClientOrderId: this.generateClientOrderId(),
-				timestamp: Date.now(),
-				recvWindow: 50000,
-			};
-
-			const mainOrder = await this.asterApiService.post<Order>('/fapi/v3/order', mainOrderRequest);
-			if (!mainOrder.success) {
-				this.logger.error('Failed to place main order:', mainOrder.error);
-				return {
-					success: false,
-					error: mainOrder.error || 'Failed to place main order',
-					data: mainOrder.data as any, // Return error details from Aster API
-					timestamp: Date.now(),
-				};
+			// Set leverage BEFORE placing orders (critical!)
+			try {
+				const levResp = await this.setLeverage(symbol, leverage);
+				if (!levResp.success) {
+					this.logger.warn(`⚠️ Leverage set failed: ${levResp.error} - continuing with existing leverage`);
+				} else {
+					this.logger.log(`✅ Leverage set to ${leverage}x for ${symbol}`);
+				}
+			} catch (e) {
+				this.logger.warn('⚠️ Error setting leverage (continuing):', e.message || e);
 			}
 
-			// Log full response to debug
-			this.logger.debug('Main order response:', JSON.stringify(mainOrder.data));
+			// Calculate stop loss and take profit prices BEFORE placing orders
+			// IMPORTANT: Adjust SL/TP by leverage to get actual account P&L percentage
+			// Example: 15% SL with 10x leverage = 1.5% price movement = 15% account loss
+			const priceMovementSL = stopLossPercent / leverage;
+			const priceMovementTP = takeProfitPercent / leverage;
 
-			// Get executed quantity from main order - prioritize origQty as executedQty may be 0 initially
-			const orderData = mainOrder.data as any;
-			const executedQty = mainOrder.data?.origQty || mainOrder.data?.executedQty || orderData?.qty || quantity;
+			// Use higher precision for small price movements to avoid rounding issues
+			const precision = currentPrice < 1 ? 6 : currentPrice < 10 ? 4 : 2;
+			const stopLossPrice = (currentPrice * (1 + priceMovementSL / 100)).toFixed(precision);
+			const takeProfitPrice = (currentPrice * (1 - priceMovementTP / 100)).toFixed(precision);
 
-			this.logger.log(`Main order placed with quantity: ${executedQty} (status: ${mainOrder.data?.status}, origQty: ${mainOrder.data?.origQty}, executedQty: ${mainOrder.data?.executedQty})`);
+			this.logger.debug(`SL/TP adjusted by ${leverage}x leverage: Price SL movement: ${priceMovementSL.toFixed(2)}%, Price TP movement: ${priceMovementTP.toFixed(2)}%`);
+			this.logger.debug(`Current Price: ${currentPrice}, SL Price: ${stopLossPrice}, TP Price: ${takeProfitPrice}`);
 
-			// Calculate stop loss and take profit prices
-			const stopLossPrice = (currentPrice * (1 + stopLossPercent / 100)).toFixed(2);
-			const takeProfitPrice = (currentPrice * (1 - takeProfitPercent / 100)).toFixed(2);
-
-			this.logger.debug(`SL Price: ${stopLossPrice}, TP Price: ${takeProfitPrice}`);
-
-			// Place stop loss order (close all position when triggered)
-			const stopLossRequest: OrderRequest = {
-				symbol,
-				side: 'BUY',
-				type: 'STOP_MARKET',
-				stopPrice: stopLossPrice,
-				closePosition: 'true', // Close all SHORT position when triggered
-				workingType: 'CONTRACT_PRICE',
-				newClientOrderId: this.generateClientOrderId(),
-			};
-
-			// Use batch orders to place STOP LOSS and TAKE PROFIT in one request
-			const slTpOrders: OrderRequest[] = [
+			// Batch ALL 3 orders: Main SHORT + Stop Loss + Take Profit
+			const allOrders: OrderRequest[] = [
+				{
+					symbol,
+					side: 'SELL',
+					type: 'MARKET',
+					quantity,
+					newClientOrderId: this.generateClientOrderId(),
+				},
 				{
 					symbol,
 					side: 'BUY', // SHORT position needs BUY to close
 					type: 'STOP_MARKET',
 					stopPrice: stopLossPrice,
-					closePosition: 'true', // Close all SHORT position when triggered
+					closePosition: 'true',
 					workingType: 'CONTRACT_PRICE',
 					newClientOrderId: this.generateClientOrderId(),
 				},
@@ -734,32 +724,36 @@ export class TradingService {
 					side: 'BUY', // SHORT position needs BUY to close
 					type: 'TAKE_PROFIT_MARKET',
 					stopPrice: takeProfitPrice,
-					closePosition: 'true', // Close all SHORT position when triggered
+					closePosition: 'true',
 					workingType: 'CONTRACT_PRICE',
 					newClientOrderId: this.generateClientOrderId(),
 				},
 			];
 
-			const batchResult = await this.batchOrders(slTpOrders);
+			const batchResult = await this.batchOrders(allOrders);
 
-			let stopLossOrder: AsterApiResponse<any> = { success: false, timestamp: Date.now() };
-			let takeProfitOrder: AsterApiResponse<any> = { success: false, timestamp: Date.now() };
-
-			if (batchResult.success && Array.isArray(batchResult.data)) {
-				stopLossOrder = { success: true, data: batchResult.data[0], timestamp: Date.now() };
-				takeProfitOrder = { success: true, data: batchResult.data[1], timestamp: Date.now() };
-				this.logger.log('✅ STOP LOSS & TAKE PROFIT orders placed (batch):', 
-stopLossOrder.data?.orderId, takeProfitOrder.data?.orderId);
-			} else {
-				this.logger.error('❌ FAILED to place SL/TP batch orders:', batchResult.error);
+			if (!batchResult.success || !Array.isArray(batchResult.data) || batchResult.data.length < 3) {
+				this.logger.error('❌ Batch orders failed:', batchResult.error);
+				return {
+					success: false,
+					error: batchResult.error || 'Failed to place batch orders',
+					data: batchResult.data as any,
+					timestamp: Date.now(),
+				};
 			}
+
+			const mainOrder = batchResult.data[0];
+			const stopLossOrder = batchResult.data[1];
+			const takeProfitOrder = batchResult.data[2];
+
+			this.logger.log(`✅ All 3 orders placed in batch: Main=${mainOrder.orderId}, SL=${stopLossOrder.orderId}, TP=${takeProfitOrder.orderId}`);
 
 			return {
 				success: true,
 				data: {
-					mainOrder: mainOrder.data,
-					stopLoss: stopLossOrder.success ? stopLossOrder.data : undefined,
-					takeProfit: takeProfitOrder.success ? takeProfitOrder.data : undefined,
+					mainOrder,
+					stopLoss: stopLossOrder,
+					takeProfit: takeProfitOrder,
 				},
 				timestamp: Date.now(),
 			};
