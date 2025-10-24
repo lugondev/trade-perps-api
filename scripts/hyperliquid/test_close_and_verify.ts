@@ -2,7 +2,7 @@
  * Test close position và verify TP/SL orders bị cancel
  */
 
-async function testClosePosition() {
+async function testClosePositionAndVerify() {
 	const API_BASE = 'http://localhost:8080';
 
 	try {
@@ -64,4 +64,4 @@ async function testClosePosition() {
 	}
 }
 
-testClosePosition();
+testClosePositionAndVerify();
