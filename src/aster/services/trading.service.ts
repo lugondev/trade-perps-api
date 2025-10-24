@@ -469,6 +469,28 @@ export class TradingService {
 	}
 
 	/**
+	 * Get price precision for stop loss and take profit orders based on symbol
+	 * BTC requires special handling with only 1 decimal place for SL/TP
+	 */
+	private getPricePrecision(currentPrice: number, symbol: string): number {
+		// BTC has special precision requirements - only 1 decimal place for SL/TP
+		if (symbol.startsWith('BTC')) {
+			return 1;
+		}
+
+		// For other symbols, use dynamic precision based on price
+		if (currentPrice < 1) {
+			return 6; // Very low price coins need high precision
+		} else if (currentPrice < 10) {
+			return 4; // Low price coins
+		} else if (currentPrice < 100) {
+			return 3; // Medium price coins
+		} else {
+			return 2; // High price coins
+		}
+	}
+
+	/**
 	 * Quick Long position with current market price
 	 * @param symbol Trading pair symbol (e.g., BTCUSDT)
 	 * @param usdtValue Value in USDT to long
@@ -543,13 +565,13 @@ export class TradingService {
 			const priceMovementSL = stopLossPercent / leverage;
 			const priceMovementTP = takeProfitPercent / leverage;
 
-			// Use higher precision for small price movements to avoid rounding issues
-			const precision = currentPrice < 1 ? 6 : currentPrice < 10 ? 4 : 2;
+			// Get appropriate precision based on symbol (BTC has special requirements)
+			const precision = this.getPricePrecision(currentPrice, symbol);
 			const stopLossPrice = (currentPrice * (1 - priceMovementSL / 100)).toFixed(precision);
 			const takeProfitPrice = (currentPrice * (1 + priceMovementTP / 100)).toFixed(precision);
 
 			this.logger.debug(`SL/TP adjusted by ${leverage}x leverage: Price SL movement: ${priceMovementSL.toFixed(2)}%, Price TP movement: ${priceMovementTP.toFixed(2)}%`);
-			this.logger.debug(`Current Price: ${currentPrice}, SL Price: ${stopLossPrice}, TP Price: ${takeProfitPrice}`);
+			this.logger.debug(`Symbol: ${symbol}, Precision: ${precision}, Current Price: ${currentPrice}, SL Price: ${stopLossPrice}, TP Price: ${takeProfitPrice}`);
 
 			// Batch ALL 3 orders: Main LONG + Stop Loss + Take Profit
 			const allOrders: OrderRequest[] = [
@@ -693,13 +715,13 @@ export class TradingService {
 			const priceMovementSL = stopLossPercent / leverage;
 			const priceMovementTP = takeProfitPercent / leverage;
 
-			// Use higher precision for small price movements to avoid rounding issues
-			const precision = currentPrice < 1 ? 6 : currentPrice < 10 ? 4 : 2;
+			// Get appropriate precision based on symbol (BTC has special requirements)
+			const precision = this.getPricePrecision(currentPrice, symbol);
 			const stopLossPrice = (currentPrice * (1 + priceMovementSL / 100)).toFixed(precision);
 			const takeProfitPrice = (currentPrice * (1 - priceMovementTP / 100)).toFixed(precision);
 
 			this.logger.debug(`SL/TP adjusted by ${leverage}x leverage: Price SL movement: ${priceMovementSL.toFixed(2)}%, Price TP movement: ${priceMovementTP.toFixed(2)}%`);
-			this.logger.debug(`Current Price: ${currentPrice}, SL Price: ${stopLossPrice}, TP Price: ${takeProfitPrice}`);
+			this.logger.debug(`Symbol: ${symbol}, Precision: ${precision}, Current Price: ${currentPrice}, SL Price: ${stopLossPrice}, TP Price: ${takeProfitPrice}`);
 
 			// Batch ALL 3 orders: Main SHORT + Stop Loss + Take Profit
 			const allOrders: OrderRequest[] = [
