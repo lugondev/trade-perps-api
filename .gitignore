@@ -18,7 +18,11 @@ build/
 .env.local
 .env.development.local
 .env.test.local
+.env.production
 .env.production.local
+.env.staging
+.env.staging.*
+.env.staging.local
 .env*.local
 
 # Cloud Run config (contains project-specific info)
