@@ -1,13 +1,15 @@
-# Aster DEX Trading Bot
+# Perpetual Futures Trading Bot
 
-A sophisticated NestJS-based trading bot for Aster DEX with comprehensive features for balance checking, trade history, and automated trading.
+A sophisticated NestJS-based trading bot supporting multiple perpetual futures exchanges including Aster DEX and Hyperliquid with comprehensive features for balance checking, trade history, and automated trading.
 
 ## Features
 
+- ✅ **Multi-Exchange Support**: Trade on Aster DEX and Hyperliquid
 - ✅ **Balance Management**: Check account balances, portfolio value, and asset allocations
 - ✅ **Trading Operations**: Place market/limit orders, manage positions, cancel orders
+- ✅ **Advanced Trading**: Quick Long/Short with automatic SL/TP placement
 - ✅ **History & Analytics**: View trade history, P&L reports, and trading statistics
-- ✅ **WebSocket Integration**: Real-time market data and order updates
+- ✅ **WebSocket Integration**: Real-time market data and order updates (Aster)
 - ✅ **REST API**: Full REST API with Swagger documentation
 - ✅ **Type Safety**: Complete TypeScript implementation with proper types
 - ✅ **Error Handling**: Comprehensive error handling and logging
@@ -27,21 +29,24 @@ npm install
 
 ### 2. Configuration
 
-Update the `.env` file with your Aster DEX API credentials:
+Update the `.env` file with your exchange API credentials:
 
 ```env
 # Aster DEX API Configuration
 ASTER_API_KEY=your_api_key_here
 ASTER_API_SECRET=your_api_secret_here
-
-# Wallet Addresses
 ASTER_USER_ADDRESS=your_main_wallet_address
 ASTER_SIGNER_ADDRESS=your_signer_wallet_address
 ASTER_PRIVATE_KEY=your_private_key_here
-
-# API URLs
 ASTER_REST_URL=https://fapi.asterdex.com
 ASTER_WS_URL=wss://fstream.asterdex.com
+
+# Hyperliquid API Configuration
+HYPERLIQUID_REST_URL=https://api.hyperliquid.xyz
+HYPERLIQUID_WS_URL=wss://api.hyperliquid.xyz/ws
+HYPERLIQUID_WALLET_ADDRESS=your_wallet_address_here
+HYPERLIQUID_PRIVATE_KEY=your_hyperliquid_private_key_here
+HYPERLIQUID_TESTNET=false
 
 # Application settings
 NODE_ENV=development
@@ -49,11 +54,11 @@ PORT=3000
 LOG_LEVEL=debug
 
 # API Access Control (IMPORTANT!)
-# This key is required to access protected /aster endpoints
+# This key is required to access protected endpoints
 API_KEY_ACCESS=your_secure_api_key_here
 ```
 
-**Security Note:** The `API_KEY_ACCESS` is required in the `X-API-Key` header for all requests to `/aster/*` endpoints. See [API Key Authentication](.docs/api-key-authentication.md) for details.
+**Security Note:** The `API_KEY_ACCESS` is required in the `X-API-Key` header for all requests to protected endpoints. See [API Key Authentication](.docs/api-key-authentication.md) for details.
 
 ### 3. Start the Application
 
@@ -73,7 +78,7 @@ The application will be available at:
 
 ## Authentication
 
-All endpoints under `/aster/*` are protected with API key authentication.
+All endpoints under `/aster/*` and `/hyperliquid/*` are protected with API key authentication.
 
 **Required Header:**
 
@@ -213,22 +218,135 @@ curl -X POST http://localhost:3000/aster/websocket/subscribe/ticker/BTCUSDT
 curl -X POST http://localhost:3000/aster/websocket/subscribe/orderbook/BTCUSDT
 ```
 
+## Hyperliquid API Endpoints
+
+All Hyperliquid endpoints require the `X-API-Key` header.
+
+### Balance & Portfolio
+
+- `GET /hyperliquid/balance` - Get account balance and positions
+- `GET /hyperliquid/portfolio` - Get portfolio summary
+- `GET /hyperliquid/positions` - Get all open positions
+- `GET /hyperliquid/position/:coin` - Get position for specific coin (e.g., BTC, ETH)
+
+### Trading
+
+- `POST /hyperliquid/order/market` - Place market order
+- `POST /hyperliquid/order/limit` - Place limit order
+- `POST /hyperliquid/order/cancel` - Cancel specific order
+- `POST /hyperliquid/order/cancel-all` - Cancel all orders
+- `GET /hyperliquid/orders` - Get open orders
+- `POST /hyperliquid/leverage` - Set leverage for a coin
+
+### Advanced Trading
+
+- `POST /hyperliquid/quick-long` - Quick long position with SL/TP
+- `POST /hyperliquid/quick-short` - Quick short position with SL/TP
+- `POST /hyperliquid/close-position` - Close position (full or partial)
+- `POST /hyperliquid/close-all-positions` - Close all open positions
+
+### Market Data
+
+- `GET /hyperliquid/meta` - Get exchange metadata
+- `GET /hyperliquid/symbols` - Get all available symbols
+- `GET /hyperliquid/orderbook/:coin` - Get order book
+- `GET /hyperliquid/trades/:coin` - Get recent trades
+- `GET /hyperliquid/price/:coin` - Get current price
+- `GET /hyperliquid/prices` - Get all current prices
+- `GET /hyperliquid/candles/:coin` - Get candles/klines
+- `GET /hyperliquid/funding/:coin` - Get funding history
+- `GET /hyperliquid/ticker/:coin` - Get 24hr ticker stats
+
+### History & Analytics
+
+- `GET /hyperliquid/history/trades` - Get trade history
+- `GET /hyperliquid/history/recent-trades` - Get recent trades (last N days)
+- `GET /hyperliquid/history/pnl` - Get P&L statistics
+- `GET /hyperliquid/history/stats-by-coin` - Get trading stats by coin
+
+### Hyperliquid Usage Examples
+
+**Quick Long Position:**
+
+```bash
+curl -X POST http://localhost:3000/hyperliquid/quick-long \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your_api_key" \
+  -d '{
+    "coin": "BTC",
+    "usdValue": 100,
+    "stopLossPercent": 5,
+    "takeProfitPercent": 10,
+    "leverage": 5
+  }'
+```
+
+**Get Portfolio:**
+
+```bash
+curl -H "X-API-Key: your_api_key" \
+  http://localhost:3000/hyperliquid/portfolio
+```
+
+**Place Market Order:**
+
+```bash
+curl -X POST http://localhost:3000/hyperliquid/order/market \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your_api_key" \
+  -d '{
+    "coin": "ETH",
+    "isBuy": true,
+    "size": 0.1
+  }'
+```
+
+**Close Position:**
+
+```bash
+curl -X POST http://localhost:3000/hyperliquid/close-position \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your_api_key" \
+  -d '{
+    "coin": "BTC"
+  }'
+```
+
 ## Project Structure
 
-```
+```text
 src/
-├── aster/                  # Aster DEX integration module
-│   ├── controllers/        # REST API controllers
-│   ├── services/          # Business logic services
-│   │   ├── aster-api.service.ts      # Core API client
-│   │   ├── balance.service.ts        # Balance operations
-│   │   ├── trading.service.ts        # Trading operations
-│   │   ├── history.service.ts        # History & analytics
-│   │   └── aster-websocket.service.ts # WebSocket client
-│   ├── types/             # TypeScript type definitions
-│   └── aster.module.ts    # Module configuration
-├── app.module.ts          # Main application module
-└── main.ts               # Application entry point
+├── aster/                    # Aster DEX integration
+│   ├── controllers/          # REST API controllers
+│   ├── services/             # Business logic services
+│   │   ├── aster-api.service.ts
+│   │   ├── balance.service.ts
+│   │   ├── trading.service.ts
+│   │   ├── history.service.ts
+│   │   ├── market-data.service.ts
+│   │   └── aster-websocket.service.ts
+│   ├── types/                # TypeScript type definitions
+│   └── aster.module.ts       # Module configuration
+├── hyperliquid/              # Hyperliquid integration
+│   ├── controllers/          # REST API controllers
+│   ├── services/             # Business logic services
+│   │   ├── hyperliquid-api.service.ts
+│   │   ├── balance.service.ts
+│   │   ├── trading.service.ts
+│   │   ├── history.service.ts
+│   │   └── market-data.service.ts
+│   ├── types/                # TypeScript type definitions
+│   └── hyperliquid.module.ts # Module configuration
+├── common/                   # Shared utilities
+│   ├── decorators/           # Custom decorators
+│   └── guards/               # Authentication guards
+├── config/                   # Configuration files
+│   ├── app.config.ts
+│   ├── aster.config.ts
+│   ├── hyperliquid.config.ts
+│   └── trading.config.ts
+├── app.module.ts             # Main application module
+└── main.ts                   # Application entry point
 ```
 
 ## Configuration
@@ -248,6 +366,7 @@ src/
 ### API Authentication
 
 The bot uses HMAC SHA256 signature authentication:
+
 1. Combines HTTP method, path, query string, body, and timestamp
 2. Signs with your API secret using HMAC SHA256
 3. Includes signature in `X-SIGNATURE` header
@@ -331,6 +450,8 @@ For issues and questions:
 ## License
 
 MIT License - see LICENSE file for details.
+
+---
 
 ---
 
