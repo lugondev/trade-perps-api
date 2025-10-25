@@ -1,11 +1,13 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
-import { AsterModule } from './aster/aster.module';
-import { HyperliquidModule } from './hyperliquid/hyperliquid.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { appConfig, asterConfig, hyperliquidConfig, tradingConfig } from './config';
+
+// New architecture modules
+import { CommonModule } from './common/common.module';
+import { ExchangesModule } from './exchanges/exchanges.module';
 
 @Module({
 	imports: [
@@ -15,8 +17,10 @@ import { appConfig, asterConfig, hyperliquidConfig, tradingConfig } from './conf
 			load: [appConfig, asterConfig, hyperliquidConfig, tradingConfig],
 		}),
 		ScheduleModule.forRoot(),
-		AsterModule,
-		HyperliquidModule,
+
+		// New architecture
+		CommonModule,
+		ExchangesModule,
 	],
 	controllers: [AppController],
 	providers: [AppService],

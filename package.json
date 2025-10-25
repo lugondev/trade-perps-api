@@ -17,10 +17,7 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json",
-    "hyperliquid:testnet": "ts-node -r tsconfig-paths/register scripts/hyperliquid/testnet_client.ts",
-    "hyperliquid:test-trading": "ts-node -r tsconfig-paths/register scripts/hyperliquid/test_trading.ts",
-    "aster:test-precision": "ts-node -r tsconfig-paths/register scripts/aster/test_btc_precision.ts"
+    "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
     "@nestjs/common": "^10.3.0",
