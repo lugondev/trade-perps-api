@@ -1,30 +1,39 @@
-# Perpetual Futures Trading Bot
+# Perps Vibe AI - Multi-Exchange Trading Bot
 
-A sophisticated NestJS-based trading bot supporting multiple perpetual futures exchanges including Aster DEX and Hyperliquid with comprehensive features for balance checking, trade history, and automated trading.
+A sophisticated NestJS-based trading bot with **Unified API Architecture** supporting multiple perpetual futures exchanges including Aster DEX and Hyperliquid.
 
-## Features
+## 🎯 Architecture Highlights
 
-- ✅ **Multi-Exchange Support**: Trade on Aster DEX and Hyperliquid
-- ✅ **Balance Management**: Check account balances, portfolio value, and asset allocations
-- ✅ **Trading Operations**: Place market/limit orders, manage positions, cancel orders
-- ✅ **Advanced Trading**: Quick Long/Short with automatic SL/TP placement
-- ✅ **History & Analytics**: View trade history, P&L reports, and trading statistics
-- ✅ **WebSocket Integration**: Real-time market data and order updates (Aster)
-- ✅ **REST API**: Full REST API with Swagger documentation
-- ✅ **Type Safety**: Complete TypeScript implementation with proper types
-- ✅ **Error Handling**: Comprehensive error handling and logging
-- ✅ **Authentication**: Secure API key/secret authentication with HMAC signatures
+- ✅ **Unified API**: 57 endpoints serving all exchanges (vs 150+ per-exchange endpoints)
+- ✅ **Factory Pattern**: Dynamic service resolution at runtime
+- ✅ **Interface-Driven**: Clean, maintainable, and easily extensible
+- ✅ **Type-Safe**: Full TypeScript with strict mode
+- ✅ **Plug & Play**: Add new exchanges in 10 minutes
 
-## Quick Start
+## 🚀 Features
+
+### Core Features
+- ✅ **Multi-Exchange Support**: Aster DEX, Hyperliquid (ready for Binance, OKX, Bybit)
+- ✅ **Unified API**: Single set of endpoints for all exchanges
+- ✅ **Trading Operations**: Market/limit orders, positions, leverage management
+- ✅ **Risk Management**: Stop-loss, take-profit, margin control
+- ✅ **Balance & P&L**: Portfolio tracking, liquidation risk, funding fees
+- ✅ **Market Data**: Real-time prices, orderbook, candles, funding rates
+
+### Technical Features
+- ✅ **REST API**: Swagger documentation at `/api`
+- ✅ **WebSocket**: Real-time updates (Aster, Hyperliquid)
+- ✅ **Authentication**: API Key guard + Public endpoints
+- ✅ **Error Handling**: Standardized ApiResponse format
+- ✅ **Clean Architecture**: Easy to test, maintain, extend
+
+## 📦 Quick Start
 
 ### 1. Installation
 
 ```bash
 # Install dependencies
 pnpm install
-
-# Or using npm
-npm install
 ```
 
 ### 2. Configuration

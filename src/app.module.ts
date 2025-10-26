@@ -8,6 +8,7 @@ import { appConfig, asterConfig, hyperliquidConfig, tradingConfig } from './conf
 // New architecture modules
 import { CommonModule } from './common/common.module';
 import { ExchangesModule } from './exchanges/exchanges.module';
+import { ApiModule } from './api/api.module';
 
 @Module({
 	imports: [
@@ -21,6 +22,7 @@ import { ExchangesModule } from './exchanges/exchanges.module';
 		// New architecture
 		CommonModule,
 		ExchangesModule,
+		ApiModule,
 	],
 	controllers: [AppController],
 	providers: [AppService],
