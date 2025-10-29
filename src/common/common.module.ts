@@ -6,4 +6,4 @@ import { ExchangeRegistry, ExchangeServiceFactory } from './factory';
   providers: [ExchangeRegistry, ExchangeServiceFactory],
   exports: [ExchangeRegistry, ExchangeServiceFactory],
 })
-export class CommonModule { }
+export class CommonModule {}

@@ -19,12 +19,19 @@ export class PlaceOrderDto {
   @IsString()
   quantity: string;
 
-  @ApiPropertyOptional({ example: '50000.00', description: 'Order price (required for LIMIT orders)' })
+  @ApiPropertyOptional({
+    example: '50000.00',
+    description: 'Order price (required for LIMIT orders)',
+  })
   @IsOptional()
   @IsString()
   price?: string;
 
-  @ApiPropertyOptional({ enum: TimeInForce, example: TimeInForce.GTC, description: 'Time in force' })
+  @ApiPropertyOptional({
+    enum: TimeInForce,
+    example: TimeInForce.GTC,
+    description: 'Time in force',
+  })
   @IsOptional()
   @IsEnum(TimeInForce)
   timeInForce?: TimeInForce;
@@ -84,7 +91,11 @@ export class LimitOrderDto {
   @IsString()
   price: string;
 
-  @ApiPropertyOptional({ enum: TimeInForce, example: TimeInForce.GTC, description: 'Time in force' })
+  @ApiPropertyOptional({
+    enum: TimeInForce,
+    example: TimeInForce.GTC,
+    description: 'Time in force',
+  })
   @IsOptional()
   @IsEnum(TimeInForce)
   timeInForce?: TimeInForce;
@@ -175,7 +186,10 @@ export class ClosePositionDto {
   @IsString()
   symbol: string;
 
-  @ApiPropertyOptional({ example: '0.001', description: 'Quantity to close (optional, closes all if not provided)' })
+  @ApiPropertyOptional({
+    example: '0.001',
+    description: 'Quantity to close (optional, closes all if not provided)',
+  })
   @IsOptional()
   @IsString()
   quantity?: string;
@@ -185,7 +199,10 @@ export class ClosePositionDto {
   @IsEnum(PositionSide)
   positionSide?: PositionSide;
 
-  @ApiPropertyOptional({ example: 1, description: 'Slippage tolerance in percentage (default: 1%)' })
+  @ApiPropertyOptional({
+    example: 1,
+    description: 'Slippage tolerance in percentage (default: 1%)',
+  })
   @IsOptional()
   @IsNumber()
   slippage?: number;
@@ -248,7 +265,10 @@ export class SetStopLossDto {
   @IsString()
   stopPrice: string;
 
-  @ApiPropertyOptional({ example: '0.5', description: 'Quantity (leave empty for entire position)' })
+  @ApiPropertyOptional({
+    example: '0.5',
+    description: 'Quantity (leave empty for entire position)',
+  })
   @IsOptional()
   @IsString()
   quantity?: string;
@@ -271,7 +291,10 @@ export class SetTakeProfitDto {
   @IsString()
   takeProfitPrice: string;
 
-  @ApiPropertyOptional({ example: '0.5', description: 'Quantity (leave empty for entire position)' })
+  @ApiPropertyOptional({
+    example: '0.5',
+    description: 'Quantity (leave empty for entire position)',
+  })
   @IsOptional()
   @IsString()
   quantity?: string;

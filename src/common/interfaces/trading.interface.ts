@@ -97,4 +97,3 @@ export interface IBaseTradingService {
    */
   limitSell(symbol: string, quantity: string, price: string): Promise<ApiResponse<Order>>;
 }
-

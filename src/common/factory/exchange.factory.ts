@@ -1,11 +1,7 @@
 import { Injectable, Type } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
 import { ExchangeName, TradingType } from '../types/exchange.types';
-import {
-  IBaseTradingService,
-  IBaseBalanceService,
-  IBaseMarketService,
-} from '../interfaces';
+import { IBaseTradingService, IBaseBalanceService, IBaseMarketService } from '../interfaces';
 
 /**
  * Exchange service registration metadata
@@ -60,14 +56,14 @@ export class ExchangeRegistry {
    * Get exchanges by trading type
    */
   getByTradingType(tradingType: TradingType): ExchangeServiceMetadata[] {
-    return this.getAll().filter((e) => e.tradingType === tradingType);
+    return this.getAll().filter(e => e.tradingType === tradingType);
   }
 
   /**
    * Get exchanges by name
    */
   getByExchange(exchange: ExchangeName): ExchangeServiceMetadata[] {
-    return this.getAll().filter((e) => e.exchange === exchange);
+    return this.getAll().filter(e => e.exchange === exchange);
   }
 
   private getKey(exchange: ExchangeName, tradingType: TradingType): string {
@@ -83,7 +79,7 @@ export class ExchangeServiceFactory {
   constructor(
     private readonly registry: ExchangeRegistry,
     private readonly moduleRef: ModuleRef,
-  ) { }
+  ) {}
 
   /**
    * Get trading service for exchange
@@ -130,7 +126,10 @@ export class ExchangeServiceFactory {
   /**
    * Get all services for exchange
    */
-  async getAllServices(exchange: ExchangeName, tradingType: TradingType): Promise<{
+  async getAllServices(
+    exchange: ExchangeName,
+    tradingType: TradingType,
+  ): Promise<{
     trading: IBaseTradingService;
     balance: IBaseBalanceService;
     market: IBaseMarketService;
@@ -156,7 +155,7 @@ export class ExchangeServiceFactory {
     exchange: ExchangeName;
     tradingType: TradingType;
   }> {
-    return this.registry.getAll().map((metadata) => ({
+    return this.registry.getAll().map(metadata => ({
       exchange: metadata.exchange,
       tradingType: metadata.tradingType,
     }));

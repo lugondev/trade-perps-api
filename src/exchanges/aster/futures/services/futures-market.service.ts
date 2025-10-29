@@ -1,6 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { IFuturesMarketService, FundingRate } from '../../../../common/interfaces';
-import { ApiResponse, OrderBook, Candle, Trade, OrderSide } from '../../../../common/types/exchange.types';
+import {
+  ApiResponse,
+  OrderBook,
+  Candle,
+  Trade,
+  OrderSide,
+} from '../../../../common/types/exchange.types';
 import { AsterApiService } from '../../shared/aster-api.service';
 
 interface SymbolInfo {
@@ -18,7 +24,7 @@ export class AsterFuturesMarketService implements IFuturesMarketService {
   private cacheExpiry: number = 0;
   private readonly CACHE_DURATION = 3600000; // 1 hour
 
-  constructor(private readonly asterApiService: AsterApiService) { }
+  constructor(private readonly asterApiService: AsterApiService) {}
 
   /**
    * Get current price for symbol
@@ -514,7 +520,10 @@ export class AsterFuturesMarketService implements IFuturesMarketService {
       if (endTime) params.endTime = endTime;
       if (limit) params.limit = limit;
 
-      const response = await this.asterApiService.get<any[]>('/futures/data/openInterestHist', params);
+      const response = await this.asterApiService.get<any[]>(
+        '/futures/data/openInterestHist',
+        params,
+      );
 
       return {
         ...response,
@@ -548,7 +557,10 @@ export class AsterFuturesMarketService implements IFuturesMarketService {
       if (endTime) params.endTime = endTime;
       if (limit) params.limit = limit;
 
-      const response = await this.asterApiService.get<any[]>('/futures/data/globalLongShortAccountRatio', params);
+      const response = await this.asterApiService.get<any[]>(
+        '/futures/data/globalLongShortAccountRatio',
+        params,
+      );
 
       return {
         ...response,
@@ -674,9 +686,7 @@ export class AsterFuturesMarketService implements IFuturesMarketService {
       const response = await this.asterApiService.get<any>('/fapi/v1/exchangeInfo');
 
       if (response.success && response.data?.symbols) {
-        const symbols = response.data.symbols
-          .map((s: any) => s.symbol)
-          .filter((s: string) => s); // Filter out empty symbols
+        const symbols = response.data.symbols.map((s: any) => s.symbol).filter((s: string) => s); // Filter out empty symbols
 
         return {
           success: true,

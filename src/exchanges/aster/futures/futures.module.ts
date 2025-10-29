@@ -17,10 +17,6 @@ import { AsterApiService } from '../shared/aster-api.service';
     AsterFuturesMarketService,
     AsterApiService,
   ],
-  exports: [
-    AsterFuturesTradingService,
-    AsterFuturesBalanceService,
-    AsterFuturesMarketService,
-  ],
+  exports: [AsterFuturesTradingService, AsterFuturesBalanceService, AsterFuturesMarketService],
 })
-export class AsterFuturesModule { }
+export class AsterFuturesModule {}

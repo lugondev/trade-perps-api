@@ -1,13 +1,18 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { IFuturesBalanceService } from '../../../../common/interfaces';
-import { ApiResponse, Balance, Position, PositionSide } from '../../../../common/types/exchange.types';
+import {
+  ApiResponse,
+  Balance,
+  Position,
+  PositionSide,
+} from '../../../../common/types/exchange.types';
 import { AsterApiService } from '../../shared/aster-api.service';
 
 @Injectable()
 export class AsterFuturesBalanceService implements IFuturesBalanceService {
   private readonly logger = new Logger(AsterFuturesBalanceService.name);
 
-  constructor(private readonly asterApiService: AsterApiService) { }
+  constructor(private readonly asterApiService: AsterApiService) {}
 
   /**
    * Get account balance
@@ -22,15 +27,16 @@ export class AsterFuturesBalanceService implements IFuturesBalanceService {
       const response = await this.asterApiService.get<any>('/fapi/v3/account', params);
 
       if (response.success && response.data) {
-        const balances: Balance[] = response.data.assets?.map((a: any) => ({
-          asset: a.asset,
-          free: a.availableBalance || a.free || '0',
-          locked: a.locked || '0',
-          total: a.walletBalance || a.total || '0',
-        })) || [];
+        const balances: Balance[] =
+          response.data.assets?.map((a: any) => ({
+            asset: a.asset,
+            free: a.availableBalance || a.free || '0',
+            locked: a.locked || '0',
+            total: a.walletBalance || a.total || '0',
+          })) || [];
 
         if (asset) {
-          const balance = balances.find((b) => b.asset === asset);
+          const balance = balances.find(b => b.asset === asset);
           if (!balance) {
             return {
               success: false,
@@ -75,7 +81,7 @@ export class AsterFuturesBalanceService implements IFuturesBalanceService {
       const result = await this.getBalance();
       if (result.success && result.data) {
         const balances = Array.isArray(result.data) ? result.data : [result.data];
-        const nonZeroBalances = balances.filter((b) => parseFloat(b.total) > 0);
+        const nonZeroBalances = balances.filter(b => parseFloat(b.total) > 0);
         return {
           ...result,
           data: nonZeroBalances,
@@ -95,7 +101,9 @@ export class AsterFuturesBalanceService implements IFuturesBalanceService {
   /**
    * Get total portfolio value
    */
-  async getPortfolioValue(): Promise<ApiResponse<{ totalValue: string; availableBalance: string; usedMargin?: string }>> {
+  async getPortfolioValue(): Promise<
+    ApiResponse<{ totalValue: string; availableBalance: string; usedMargin?: string }>
+  > {
     try {
       const accountInfo = await this.getAccountInfo();
       if (accountInfo.success && accountInfo.data) {
@@ -137,9 +145,14 @@ export class AsterFuturesBalanceService implements IFuturesBalanceService {
       const response = await this.asterApiService.get<any[]>('/fapi/v3/positionRisk', params);
 
       if (response.success && response.data) {
-        const positions: Position[] = response.data.map((p) => ({
+        const positions: Position[] = response.data.map(p => ({
           symbol: p.symbol,
-          side: parseFloat(p.positionAmt) > 0 ? PositionSide.LONG : parseFloat(p.positionAmt) < 0 ? PositionSide.SHORT : PositionSide.BOTH,
+          side:
+            parseFloat(p.positionAmt) > 0
+              ? PositionSide.LONG
+              : parseFloat(p.positionAmt) < 0
+                ? PositionSide.SHORT
+                : PositionSide.BOTH,
           size: p.positionAmt || '0',
           entryPrice: p.entryPrice || '0',
           markPrice: p.markPrice,
@@ -150,7 +163,7 @@ export class AsterFuturesBalanceService implements IFuturesBalanceService {
         }));
 
         if (symbol) {
-          const position = positions.find((p) => p.symbol === symbol);
+          const position = positions.find(p => p.symbol === symbol);
           if (!position) {
             return {
               success: false,
@@ -195,7 +208,7 @@ export class AsterFuturesBalanceService implements IFuturesBalanceService {
       const result = await this.getPositions();
       if (result.success && result.data) {
         const positions = Array.isArray(result.data) ? result.data : [result.data];
-        const nonZeroPositions = positions.filter((p) => parseFloat(p.size) !== 0);
+        const nonZeroPositions = positions.filter(p => parseFloat(p.size) !== 0);
         return {
           ...result,
           data: nonZeroPositions,
@@ -236,6 +249,7 @@ export class AsterFuturesBalanceService implements IFuturesBalanceService {
   // ==================== Additional Futures Interface Methods ====================
   // TODO: Implement these methods fully
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async getPositionMargin(symbol?: string): Promise<ApiResponse<any>> {
     // Stub implementation
     return { success: false, error: 'Not implemented yet', timestamp: Date.now() };
@@ -277,6 +291,7 @@ export class AsterFuturesBalanceService implements IFuturesBalanceService {
     return { success: false, error: 'Failed to get unrealized PnL', timestamp: Date.now() };
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async getMaxWithdrawAmount(asset?: string): Promise<ApiResponse<string>> {
     const accountInfo = await this.getAccountInfo();
     if (accountInfo.success && accountInfo.data?.maxWithdrawAmount) {
@@ -338,6 +353,7 @@ export class AsterFuturesBalanceService implements IFuturesBalanceService {
     return this.getIncomeHistory(symbol, 'FUNDING_FEE', startTime, endTime, limit);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async getMarginRatio(symbol: string): Promise<ApiResponse<string>> {
     return { success: false, error: 'Not implemented yet', timestamp: Date.now() };
   }
@@ -347,19 +363,19 @@ export class AsterFuturesBalanceService implements IFuturesBalanceService {
   }
 
   async calculateRequiredMargin(
-    symbol: string,
-    quantity: string,
-    leverage: number,
+    symbol: string, // eslint-disable-line @typescript-eslint/no-unused-vars
+    quantity: string, // eslint-disable-line @typescript-eslint/no-unused-vars
+    leverage: number, // eslint-disable-line @typescript-eslint/no-unused-vars
   ): Promise<ApiResponse<string>> {
     return { success: false, error: 'Not implemented yet', timestamp: Date.now() };
   }
 
   async calculatePotentialPnl(
-    symbol: string,
-    entryPrice: string,
-    exitPrice: string,
-    quantity: string,
-    side: 'LONG' | 'SHORT',
+    symbol: string, // eslint-disable-line @typescript-eslint/no-unused-vars
+    entryPrice: string, // eslint-disable-line @typescript-eslint/no-unused-vars
+    exitPrice: string, // eslint-disable-line @typescript-eslint/no-unused-vars
+    quantity: string, // eslint-disable-line @typescript-eslint/no-unused-vars
+    side: 'LONG' | 'SHORT', // eslint-disable-line @typescript-eslint/no-unused-vars
   ): Promise<ApiResponse<{ pnl: string; pnlPercentage: string }>> {
     return { success: false, error: 'Not implemented yet', timestamp: Date.now() };
   }

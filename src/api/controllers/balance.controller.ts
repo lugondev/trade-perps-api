@@ -11,7 +11,7 @@ import { IFuturesBalanceService } from '../../common/interfaces';
 export class BalanceController {
   private readonly logger = new Logger(BalanceController.name);
 
-  constructor(private readonly exchangeFactory: ExchangeServiceFactory) { }
+  constructor(private readonly exchangeFactory: ExchangeServiceFactory) {}
 
   /**
    * Get default exchange parameters
@@ -26,8 +26,14 @@ export class BalanceController {
   /**
    * Get futures balance service
    */
-  private async getFuturesBalanceService(exchange: ExchangeName, tradingType: TradingType): Promise<IFuturesBalanceService> {
-    return this.exchangeFactory.getBalanceService(exchange, tradingType) as Promise<IFuturesBalanceService>;
+  private async getFuturesBalanceService(
+    exchange: ExchangeName,
+    tradingType: TradingType,
+  ): Promise<IFuturesBalanceService> {
+    return this.exchangeFactory.getBalanceService(
+      exchange,
+      tradingType,
+    ) as Promise<IFuturesBalanceService>;
   }
 
   /**
@@ -35,8 +41,18 @@ export class BalanceController {
    */
   @Get()
   @ApiOperation({ summary: 'Get account balance' })
-  @ApiQuery({ name: 'exchange', required: false, enum: ['aster', 'hyperliquid'], example: 'hyperliquid' })
-  @ApiQuery({ name: 'tradingType', required: false, enum: ['futures', 'perpetual'], example: 'perpetual' })
+  @ApiQuery({
+    name: 'exchange',
+    required: false,
+    enum: ['aster', 'hyperliquid'],
+    example: 'hyperliquid',
+  })
+  @ApiQuery({
+    name: 'tradingType',
+    required: false,
+    enum: ['futures', 'perpetual'],
+    example: 'perpetual',
+  })
   @ApiResponse({ status: 200, description: 'Balance retrieved successfully' })
   async getBalance(
     @Query('exchange') exchange?: string,
@@ -52,8 +68,18 @@ export class BalanceController {
    */
   @Get('positions')
   @ApiOperation({ summary: 'Get all positions' })
-  @ApiQuery({ name: 'exchange', required: false, enum: ['aster', 'hyperliquid'], example: 'hyperliquid' })
-  @ApiQuery({ name: 'tradingType', required: false, enum: ['futures', 'perpetual'], example: 'perpetual' })
+  @ApiQuery({
+    name: 'exchange',
+    required: false,
+    enum: ['aster', 'hyperliquid'],
+    example: 'hyperliquid',
+  })
+  @ApiQuery({
+    name: 'tradingType',
+    required: false,
+    enum: ['futures', 'perpetual'],
+    example: 'perpetual',
+  })
   @ApiQuery({ name: 'symbol', required: false, example: 'BTCUSDT' })
   @ApiResponse({ status: 200, description: 'Positions retrieved successfully' })
   async getPositions(
@@ -71,8 +97,18 @@ export class BalanceController {
    */
   @Get('portfolio/value')
   @ApiOperation({ summary: 'Get total portfolio value in USDT' })
-  @ApiQuery({ name: 'exchange', required: false, enum: ['aster', 'hyperliquid'], example: 'hyperliquid' })
-  @ApiQuery({ name: 'tradingType', required: false, enum: ['futures', 'perpetual'], example: 'perpetual' })
+  @ApiQuery({
+    name: 'exchange',
+    required: false,
+    enum: ['aster', 'hyperliquid'],
+    example: 'hyperliquid',
+  })
+  @ApiQuery({
+    name: 'tradingType',
+    required: false,
+    enum: ['futures', 'perpetual'],
+    example: 'perpetual',
+  })
   @ApiResponse({ status: 200, description: 'Portfolio value retrieved successfully' })
   async getPortfolioValue(
     @Query('exchange') exchange?: string,
@@ -88,8 +124,18 @@ export class BalanceController {
    */
   @Get('pnl/unrealized')
   @ApiOperation({ summary: 'Get total unrealized PnL across all positions' })
-  @ApiQuery({ name: 'exchange', required: false, enum: ['aster', 'hyperliquid'], example: 'hyperliquid' })
-  @ApiQuery({ name: 'tradingType', required: false, enum: ['futures', 'perpetual'], example: 'perpetual' })
+  @ApiQuery({
+    name: 'exchange',
+    required: false,
+    enum: ['aster', 'hyperliquid'],
+    example: 'hyperliquid',
+  })
+  @ApiQuery({
+    name: 'tradingType',
+    required: false,
+    enum: ['futures', 'perpetual'],
+    example: 'perpetual',
+  })
   @ApiResponse({ status: 200, description: 'Unrealized PnL retrieved successfully' })
   async getTotalUnrealizedPnl(
     @Query('exchange') exchange?: string,
@@ -105,8 +151,18 @@ export class BalanceController {
    */
   @Get('income')
   @ApiOperation({ summary: 'Get income history (realized PnL, funding fees, etc.)' })
-  @ApiQuery({ name: 'exchange', required: false, enum: ['aster', 'hyperliquid'], example: 'hyperliquid' })
-  @ApiQuery({ name: 'tradingType', required: false, enum: ['futures', 'perpetual'], example: 'perpetual' })
+  @ApiQuery({
+    name: 'exchange',
+    required: false,
+    enum: ['aster', 'hyperliquid'],
+    example: 'hyperliquid',
+  })
+  @ApiQuery({
+    name: 'tradingType',
+    required: false,
+    enum: ['futures', 'perpetual'],
+    example: 'perpetual',
+  })
   @ApiQuery({ name: 'symbol', required: false, example: 'BTCUSDT' })
   @ApiQuery({ name: 'incomeType', required: false, example: 'REALIZED_PNL' })
   @ApiQuery({ name: 'startTime', required: false, type: Number })
@@ -132,8 +188,18 @@ export class BalanceController {
    */
   @Get('funding-fees')
   @ApiOperation({ summary: 'Get funding fee history' })
-  @ApiQuery({ name: 'exchange', required: false, enum: ['aster', 'hyperliquid'], example: 'hyperliquid' })
-  @ApiQuery({ name: 'tradingType', required: false, enum: ['futures', 'perpetual'], example: 'perpetual' })
+  @ApiQuery({
+    name: 'exchange',
+    required: false,
+    enum: ['aster', 'hyperliquid'],
+    example: 'hyperliquid',
+  })
+  @ApiQuery({
+    name: 'tradingType',
+    required: false,
+    enum: ['futures', 'perpetual'],
+    example: 'perpetual',
+  })
   @ApiQuery({ name: 'symbol', required: false, example: 'BTCUSDT' })
   @ApiQuery({ name: 'startTime', required: false, type: Number })
   @ApiQuery({ name: 'endTime', required: false, type: Number })
@@ -157,8 +223,18 @@ export class BalanceController {
    */
   @Get('risk/liquidation')
   @ApiOperation({ summary: 'Check if account is at risk of liquidation' })
-  @ApiQuery({ name: 'exchange', required: false, enum: ['aster', 'hyperliquid'], example: 'hyperliquid' })
-  @ApiQuery({ name: 'tradingType', required: false, enum: ['futures', 'perpetual'], example: 'perpetual' })
+  @ApiQuery({
+    name: 'exchange',
+    required: false,
+    enum: ['aster', 'hyperliquid'],
+    example: 'hyperliquid',
+  })
+  @ApiQuery({
+    name: 'tradingType',
+    required: false,
+    enum: ['futures', 'perpetual'],
+    example: 'perpetual',
+  })
   @ApiResponse({ status: 200, description: 'Liquidation risk retrieved successfully' })
   async isAtRiskOfLiquidation(
     @Query('exchange') exchange?: string,
@@ -174,8 +250,18 @@ export class BalanceController {
    */
   @Get('margin/required/:symbol')
   @ApiOperation({ summary: 'Calculate required margin for a position' })
-  @ApiQuery({ name: 'exchange', required: false, enum: ['aster', 'hyperliquid'], example: 'hyperliquid' })
-  @ApiQuery({ name: 'tradingType', required: false, enum: ['futures', 'perpetual'], example: 'perpetual' })
+  @ApiQuery({
+    name: 'exchange',
+    required: false,
+    enum: ['aster', 'hyperliquid'],
+    example: 'hyperliquid',
+  })
+  @ApiQuery({
+    name: 'tradingType',
+    required: false,
+    enum: ['futures', 'perpetual'],
+    example: 'perpetual',
+  })
   @ApiQuery({ name: 'quantity', required: true, type: String })
   @ApiQuery({ name: 'leverage', required: true, type: Number })
   @ApiResponse({ status: 200, description: 'Required margin calculated successfully' })
@@ -196,8 +282,18 @@ export class BalanceController {
    */
   @Get('pnl/potential/:symbol')
   @ApiOperation({ summary: 'Calculate potential PnL for a trade' })
-  @ApiQuery({ name: 'exchange', required: false, enum: ['aster', 'hyperliquid'], example: 'hyperliquid' })
-  @ApiQuery({ name: 'tradingType', required: false, enum: ['futures', 'perpetual'], example: 'perpetual' })
+  @ApiQuery({
+    name: 'exchange',
+    required: false,
+    enum: ['aster', 'hyperliquid'],
+    example: 'hyperliquid',
+  })
+  @ApiQuery({
+    name: 'tradingType',
+    required: false,
+    enum: ['futures', 'perpetual'],
+    example: 'perpetual',
+  })
   @ApiQuery({ name: 'entryPrice', required: true, type: String })
   @ApiQuery({ name: 'exitPrice', required: true, type: String })
   @ApiQuery({ name: 'quantity', required: true, type: String })
@@ -222,8 +318,18 @@ export class BalanceController {
    */
   @Get('available')
   @ApiOperation({ summary: 'Get available balance for opening new positions' })
-  @ApiQuery({ name: 'exchange', required: false, enum: ['aster', 'hyperliquid'], example: 'hyperliquid' })
-  @ApiQuery({ name: 'tradingType', required: false, enum: ['futures', 'perpetual'], example: 'perpetual' })
+  @ApiQuery({
+    name: 'exchange',
+    required: false,
+    enum: ['aster', 'hyperliquid'],
+    example: 'hyperliquid',
+  })
+  @ApiQuery({
+    name: 'tradingType',
+    required: false,
+    enum: ['futures', 'perpetual'],
+    example: 'perpetual',
+  })
   @ApiResponse({ status: 200, description: 'Available balance retrieved successfully' })
   async getAvailableBalance(
     @Query('exchange') exchange?: string,

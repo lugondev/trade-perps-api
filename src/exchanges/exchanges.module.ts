@@ -1,4 +1,4 @@
-import { Module, OnModuleInit } from '@nestjs/common';
+import { Module, OnModuleInit, Logger } from '@nestjs/common';
 import { AsterModule } from './aster/aster.module';
 import { HyperliquidModule } from './hyperliquid/hyperliquid.module';
 import { ExchangeRegistry } from '../common/factory/exchange.factory';
@@ -14,17 +14,11 @@ import { HyperliquidPerpBalanceService } from './hyperliquid/perp/services/perp-
 import { HyperliquidPerpMarketService } from './hyperliquid/perp/services/perp-market.service';
 
 @Module({
-  imports: [
-    AsterModule,
-    HyperliquidModule,
-  ],
-  exports: [
-    AsterModule,
-    HyperliquidModule,
-  ],
+  imports: [AsterModule, HyperliquidModule],
+  exports: [AsterModule, HyperliquidModule],
 })
 export class ExchangesModule implements OnModuleInit {
-  constructor(private readonly registry: ExchangeRegistry) { }
+  constructor(private readonly registry: ExchangeRegistry) {}
 
   onModuleInit() {
     // Register Aster Futures
@@ -45,6 +39,7 @@ export class ExchangesModule implements OnModuleInit {
       marketService: HyperliquidPerpMarketService,
     });
 
-    console.log('✅ Registered exchanges: aster-futures, hyperliquid-perpetual');
+    const logger = new Logger(ExchangesModule.name);
+    logger.log('✅ Registered exchanges: aster-futures, hyperliquid-perpetual');
   }
 }

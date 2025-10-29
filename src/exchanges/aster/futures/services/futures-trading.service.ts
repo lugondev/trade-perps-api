@@ -12,7 +12,14 @@ import {
   SetStopLossParams,
   SetTakeProfitParams,
 } from '../../../../common/interfaces';
-import { ApiResponse, Order, OrderSide, OrderType, TimeInForce, PositionSide, Position } from '../../../../common/types';
+import {
+  ApiResponse,
+  Order,
+  OrderSide,
+  OrderType,
+  TimeInForce,
+  Position,
+} from '../../../../common/types';
 import { AsterApiService } from '../../shared/aster-api.service';
 import { AsterFuturesBalanceService } from './futures-balance.service';
 import { AsterFuturesMarketService } from './futures-market.service';
@@ -25,7 +32,7 @@ export class AsterFuturesTradingService implements IFuturesTradingService {
     private readonly asterApiService: AsterApiService,
     private readonly balanceService: AsterFuturesBalanceService,
     private readonly marketService: AsterFuturesMarketService,
-  ) { }
+  ) {}
 
   /**
    * Place a new order - implements interface
@@ -37,23 +44,17 @@ export class AsterFuturesTradingService implements IFuturesTradingService {
       // Format quantity and price according to symbol precision
       const formattedQuantity = await this.marketService.formatQuantity(
         params.symbol,
-        params.quantity
+        params.quantity,
       );
 
       let formattedPrice: string | undefined;
       if (params.price) {
-        formattedPrice = await this.marketService.formatPrice(
-          params.symbol,
-          params.price
-        );
+        formattedPrice = await this.marketService.formatPrice(params.symbol, params.price);
       }
 
       let formattedStopPrice: string | undefined;
       if (params.stopPrice) {
-        formattedStopPrice = await this.marketService.formatPrice(
-          params.symbol,
-          params.stopPrice
-        );
+        formattedStopPrice = await this.marketService.formatPrice(params.symbol, params.stopPrice);
       }
 
       const orderRequest: any = {
@@ -218,7 +219,7 @@ export class AsterFuturesTradingService implements IFuturesTradingService {
       const response = await this.asterApiService.hmacGet<any[]>('/fapi/v1/openOrders', params);
 
       if (response.success && response.data) {
-        const orders: Order[] = response.data.map((o) => this.mapToStandardOrder(o));
+        const orders: Order[] = response.data.map(o => this.mapToStandardOrder(o));
         return {
           success: true,
           data: orders,
@@ -336,7 +337,9 @@ export class AsterFuturesTradingService implements IFuturesTradingService {
   /**
    * Set leverage for symbol
    */
-  async setLeverage(params: SetLeverageParams): Promise<ApiResponse<{ leverage: number; symbol: string }>> {
+  async setLeverage(
+    params: SetLeverageParams,
+  ): Promise<ApiResponse<{ leverage: number; symbol: string }>> {
     try {
       const requestParams = {
         symbol: params.symbol,
@@ -531,8 +534,8 @@ export class AsterFuturesTradingService implements IFuturesTradingService {
    * Set stop loss for position
    */
   async setStopLoss(params: SetStopLossParams): Promise<ApiResponse<Order>> {
-    const quantity = params.quantity || await this.getPositionQuantity(params.symbol);
-    const side = params.side || await this.getOppositeSide(params.symbol);
+    const quantity = params.quantity || (await this.getPositionQuantity(params.symbol));
+    const side = params.side || (await this.getOppositeSide(params.symbol));
 
     return this.placeOrder({
       symbol: params.symbol,
@@ -548,8 +551,8 @@ export class AsterFuturesTradingService implements IFuturesTradingService {
    * Set take profit for position
    */
   async setTakeProfit(params: SetTakeProfitParams): Promise<ApiResponse<Order>> {
-    const quantity = params.quantity || await this.getPositionQuantity(params.symbol);
-    const side = params.side || await this.getOppositeSide(params.symbol);
+    const quantity = params.quantity || (await this.getPositionQuantity(params.symbol));
+    const side = params.side || (await this.getOppositeSide(params.symbol));
 
     return this.placeOrder({
       symbol: params.symbol,
@@ -638,7 +641,7 @@ export class AsterFuturesTradingService implements IFuturesTradingService {
    * Close long position
    */
   async closeLong(symbol: string, quantity?: string): Promise<ApiResponse<Order>> {
-    const qty = quantity || await this.getPositionQuantity(symbol);
+    const qty = quantity || (await this.getPositionQuantity(symbol));
     return this.placeMarketOrder({
       symbol,
       side: OrderSide.SELL,
@@ -651,7 +654,7 @@ export class AsterFuturesTradingService implements IFuturesTradingService {
    * Close short position
    */
   async closeShort(symbol: string, quantity?: string): Promise<ApiResponse<Order>> {
-    const qty = quantity || await this.getPositionQuantity(symbol);
+    const qty = quantity || (await this.getPositionQuantity(symbol));
     return this.placeMarketOrder({
       symbol,
       side: OrderSide.BUY,
@@ -699,7 +702,10 @@ export class AsterFuturesTradingService implements IFuturesTradingService {
       const cancelResponse = await this.cancelAllOrders(symbol);
 
       if (!cancelResponse.success) {
-        this.logger.warn(`Failed to cancel orders for ${symbol}, continuing with close:`, cancelResponse.error);
+        this.logger.warn(
+          `Failed to cancel orders for ${symbol}, continuing with close:`,
+          cancelResponse.error,
+        );
       } else {
         this.logger.log(`Successfully cancelled all orders for ${symbol}`);
       }
@@ -710,7 +716,9 @@ export class AsterFuturesTradingService implements IFuturesTradingService {
         return positionsResponse;
       }
 
-      const positions = Array.isArray(positionsResponse.data) ? positionsResponse.data : [positionsResponse.data];
+      const positions = Array.isArray(positionsResponse.data)
+        ? positionsResponse.data
+        : [positionsResponse.data];
       const position = positions.find(p => p.symbol === symbol);
 
       if (!position || parseFloat(position.size) === 0) {
@@ -761,7 +769,9 @@ export class AsterFuturesTradingService implements IFuturesTradingService {
         return positionsResponse;
       }
 
-      const positions = Array.isArray(positionsResponse.data) ? positionsResponse.data : [positionsResponse.data];
+      const positions = Array.isArray(positionsResponse.data)
+        ? positionsResponse.data
+        : [positionsResponse.data];
       const openPositions = positions.filter(p => parseFloat(p.size) !== 0);
 
       if (openPositions.length === 0) {

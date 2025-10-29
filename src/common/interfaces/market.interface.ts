@@ -3,7 +3,7 @@
  * All exchange market services must implement this interface
  */
 
-import { ApiResponse, TickerPrice, OrderBook, Candle, Trade } from '../types/exchange.types';
+import { ApiResponse, OrderBook, Candle, Trade } from '../types/exchange.types';
 
 export interface IBaseMarketService {
   /**

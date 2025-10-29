@@ -1,17 +1,9 @@
 import { Module } from '@nestjs/common';
 import { CommonModule } from '../common/common.module';
-import {
-	TradingController,
-	BalanceController,
-	MarketController,
-} from './controllers';
+import { TradingController, BalanceController, MarketController } from './controllers';
 
 @Module({
-	imports: [CommonModule],
-	controllers: [
-		TradingController,
-		BalanceController,
-		MarketController,
-	],
+  imports: [CommonModule],
+  controllers: [TradingController, BalanceController, MarketController],
 })
-export class ApiModule { }
+export class ApiModule {}

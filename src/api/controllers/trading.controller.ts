@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Delete, Body, Query, Param, Logger, HttpException, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Get, Delete, Body, Query, Param, Logger } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { ApiKeyAuth } from '../../common/decorators/api-key.decorator';
 import { ExchangeServiceFactory } from '../../common/factory/exchange.factory';
@@ -25,7 +25,7 @@ import {
 export class TradingController {
   private readonly logger = new Logger(TradingController.name);
 
-  constructor(private readonly exchangeFactory: ExchangeServiceFactory) { }
+  constructor(private readonly exchangeFactory: ExchangeServiceFactory) {}
 
   /**
    * Get default exchange parameters
@@ -40,8 +40,14 @@ export class TradingController {
   /**
    * Get futures trading service
    */
-  private async getFuturesTradingService(exchange: ExchangeName, tradingType: TradingType): Promise<IFuturesTradingService> {
-    return this.exchangeFactory.getTradingService(exchange, tradingType) as Promise<IFuturesTradingService>;
+  private async getFuturesTradingService(
+    exchange: ExchangeName,
+    tradingType: TradingType,
+  ): Promise<IFuturesTradingService> {
+    return this.exchangeFactory.getTradingService(
+      exchange,
+      tradingType,
+    ) as Promise<IFuturesTradingService>;
   }
 
   /**
@@ -49,8 +55,18 @@ export class TradingController {
    */
   @Post('order')
   @ApiOperation({ summary: 'Place a new order' })
-  @ApiQuery({ name: 'exchange', required: false, enum: ['aster', 'hyperliquid'], example: 'hyperliquid' })
-  @ApiQuery({ name: 'tradingType', required: false, enum: ['futures', 'perpetual'], example: 'perpetual' })
+  @ApiQuery({
+    name: 'exchange',
+    required: false,
+    enum: ['aster', 'hyperliquid'],
+    example: 'hyperliquid',
+  })
+  @ApiQuery({
+    name: 'tradingType',
+    required: false,
+    enum: ['futures', 'perpetual'],
+    example: 'perpetual',
+  })
   @ApiResponse({ status: 201, description: 'Order placed successfully' })
   async placeOrder(
     @Query('exchange') exchange?: string,
@@ -58,7 +74,7 @@ export class TradingController {
     @Body() dto?: PlaceOrderDto,
   ) {
     const { exchange: ex, tradingType: tt } = this.getExchangeParams(exchange, tradingType);
-    const service = await this.getFuturesTradingService(ex, tt) as IFuturesTradingService;
+    const service = (await this.getFuturesTradingService(ex, tt)) as IFuturesTradingService;
     return service.placeOrder(dto!);
   }
 
@@ -67,8 +83,18 @@ export class TradingController {
    */
   @Post('order/market')
   @ApiOperation({ summary: 'Place a market order' })
-  @ApiQuery({ name: 'exchange', required: false, enum: ['aster', 'hyperliquid'], example: 'hyperliquid' })
-  @ApiQuery({ name: 'tradingType', required: false, enum: ['futures', 'perpetual'], example: 'perpetual' })
+  @ApiQuery({
+    name: 'exchange',
+    required: false,
+    enum: ['aster', 'hyperliquid'],
+    example: 'hyperliquid',
+  })
+  @ApiQuery({
+    name: 'tradingType',
+    required: false,
+    enum: ['futures', 'perpetual'],
+    example: 'perpetual',
+  })
   @ApiResponse({ status: 201, description: 'Market order placed successfully' })
   async placeMarketOrder(
     @Query('exchange') exchange?: string,
@@ -85,8 +111,18 @@ export class TradingController {
    */
   @Post('order/limit')
   @ApiOperation({ summary: 'Place a limit order' })
-  @ApiQuery({ name: 'exchange', required: false, enum: ['aster', 'hyperliquid'], example: 'hyperliquid' })
-  @ApiQuery({ name: 'tradingType', required: false, enum: ['futures', 'perpetual'], example: 'perpetual' })
+  @ApiQuery({
+    name: 'exchange',
+    required: false,
+    enum: ['aster', 'hyperliquid'],
+    example: 'hyperliquid',
+  })
+  @ApiQuery({
+    name: 'tradingType',
+    required: false,
+    enum: ['futures', 'perpetual'],
+    example: 'perpetual',
+  })
   @ApiResponse({ status: 201, description: 'Limit order placed successfully' })
   async placeLimitOrder(
     @Query('exchange') exchange?: string,
@@ -103,8 +139,18 @@ export class TradingController {
    */
   @Delete('order')
   @ApiOperation({ summary: 'Cancel an order' })
-  @ApiQuery({ name: 'exchange', required: false, enum: ['aster', 'hyperliquid'], example: 'hyperliquid' })
-  @ApiQuery({ name: 'tradingType', required: false, enum: ['futures', 'perpetual'], example: 'perpetual' })
+  @ApiQuery({
+    name: 'exchange',
+    required: false,
+    enum: ['aster', 'hyperliquid'],
+    example: 'hyperliquid',
+  })
+  @ApiQuery({
+    name: 'tradingType',
+    required: false,
+    enum: ['futures', 'perpetual'],
+    example: 'perpetual',
+  })
   @ApiResponse({ status: 200, description: 'Order cancelled successfully' })
   async cancelOrder(
     @Query('exchange') exchange?: string,
@@ -121,8 +167,18 @@ export class TradingController {
    */
   @Delete('orders/all')
   @ApiOperation({ summary: 'Cancel all orders for a symbol or all symbols' })
-  @ApiQuery({ name: 'exchange', required: false, enum: ['aster', 'hyperliquid'], example: 'hyperliquid' })
-  @ApiQuery({ name: 'tradingType', required: false, enum: ['futures', 'perpetual'], example: 'perpetual' })
+  @ApiQuery({
+    name: 'exchange',
+    required: false,
+    enum: ['aster', 'hyperliquid'],
+    example: 'hyperliquid',
+  })
+  @ApiQuery({
+    name: 'tradingType',
+    required: false,
+    enum: ['futures', 'perpetual'],
+    example: 'perpetual',
+  })
   @ApiQuery({ name: 'symbol', required: false, example: 'BTCUSDT' })
   @ApiResponse({ status: 200, description: 'All orders cancelled successfully' })
   async cancelAllOrders(
@@ -140,8 +196,18 @@ export class TradingController {
    */
   @Get('orders/open')
   @ApiOperation({ summary: 'Get open orders' })
-  @ApiQuery({ name: 'exchange', required: false, enum: ['aster', 'hyperliquid'], example: 'hyperliquid' })
-  @ApiQuery({ name: 'tradingType', required: false, enum: ['futures', 'perpetual'], example: 'perpetual' })
+  @ApiQuery({
+    name: 'exchange',
+    required: false,
+    enum: ['aster', 'hyperliquid'],
+    example: 'hyperliquid',
+  })
+  @ApiQuery({
+    name: 'tradingType',
+    required: false,
+    enum: ['futures', 'perpetual'],
+    example: 'perpetual',
+  })
   @ApiQuery({ name: 'symbol', required: false, example: 'BTCUSDT' })
   @ApiResponse({ status: 200, description: 'Open orders retrieved successfully' })
   async getOpenOrders(
@@ -159,8 +225,18 @@ export class TradingController {
    */
   @Get('order/:symbol/:orderId')
   @ApiOperation({ summary: 'Get order details' })
-  @ApiQuery({ name: 'exchange', required: false, enum: ['aster', 'hyperliquid'], example: 'hyperliquid' })
-  @ApiQuery({ name: 'tradingType', required: false, enum: ['futures', 'perpetual'], example: 'perpetual' })
+  @ApiQuery({
+    name: 'exchange',
+    required: false,
+    enum: ['aster', 'hyperliquid'],
+    example: 'hyperliquid',
+  })
+  @ApiQuery({
+    name: 'tradingType',
+    required: false,
+    enum: ['futures', 'perpetual'],
+    example: 'perpetual',
+  })
   @ApiResponse({ status: 200, description: 'Order details retrieved successfully' })
   async getOrder(
     @Param('symbol') symbol: string,
@@ -178,8 +254,18 @@ export class TradingController {
    */
   @Get('positions')
   @ApiOperation({ summary: 'Get current positions' })
-  @ApiQuery({ name: 'exchange', required: false, enum: ['aster', 'hyperliquid'], example: 'hyperliquid' })
-  @ApiQuery({ name: 'tradingType', required: false, enum: ['futures', 'perpetual'], example: 'perpetual' })
+  @ApiQuery({
+    name: 'exchange',
+    required: false,
+    enum: ['aster', 'hyperliquid'],
+    example: 'hyperliquid',
+  })
+  @ApiQuery({
+    name: 'tradingType',
+    required: false,
+    enum: ['futures', 'perpetual'],
+    example: 'perpetual',
+  })
   @ApiQuery({ name: 'symbol', required: false, example: 'BTCUSDT' })
   @ApiResponse({ status: 200, description: 'Positions retrieved successfully' })
   async getPositions(
@@ -197,8 +283,18 @@ export class TradingController {
    */
   @Post('leverage')
   @ApiOperation({ summary: 'Set leverage for a symbol' })
-  @ApiQuery({ name: 'exchange', required: false, enum: ['aster', 'hyperliquid'], example: 'hyperliquid' })
-  @ApiQuery({ name: 'tradingType', required: false, enum: ['futures', 'perpetual'], example: 'perpetual' })
+  @ApiQuery({
+    name: 'exchange',
+    required: false,
+    enum: ['aster', 'hyperliquid'],
+    example: 'hyperliquid',
+  })
+  @ApiQuery({
+    name: 'tradingType',
+    required: false,
+    enum: ['futures', 'perpetual'],
+    example: 'perpetual',
+  })
   @ApiResponse({ status: 200, description: 'Leverage set successfully' })
   async setLeverage(
     @Query('exchange') exchange?: string,
@@ -215,8 +311,18 @@ export class TradingController {
    */
   @Get('leverage/:symbol')
   @ApiOperation({ summary: 'Get current leverage for a symbol' })
-  @ApiQuery({ name: 'exchange', required: false, enum: ['aster', 'hyperliquid'], example: 'hyperliquid' })
-  @ApiQuery({ name: 'tradingType', required: false, enum: ['futures', 'perpetual'], example: 'perpetual' })
+  @ApiQuery({
+    name: 'exchange',
+    required: false,
+    enum: ['aster', 'hyperliquid'],
+    example: 'hyperliquid',
+  })
+  @ApiQuery({
+    name: 'tradingType',
+    required: false,
+    enum: ['futures', 'perpetual'],
+    example: 'perpetual',
+  })
   @ApiResponse({ status: 200, description: 'Leverage retrieved successfully' })
   async getLeverage(
     @Param('symbol') symbol: string,
@@ -233,8 +339,18 @@ export class TradingController {
    */
   @Post('margin-type')
   @ApiOperation({ summary: 'Set margin type (ISOLATED or CROSSED)' })
-  @ApiQuery({ name: 'exchange', required: false, enum: ['aster', 'hyperliquid'], example: 'hyperliquid' })
-  @ApiQuery({ name: 'tradingType', required: false, enum: ['futures', 'perpetual'], example: 'perpetual' })
+  @ApiQuery({
+    name: 'exchange',
+    required: false,
+    enum: ['aster', 'hyperliquid'],
+    example: 'hyperliquid',
+  })
+  @ApiQuery({
+    name: 'tradingType',
+    required: false,
+    enum: ['futures', 'perpetual'],
+    example: 'perpetual',
+  })
   @ApiResponse({ status: 200, description: 'Margin type set successfully' })
   async setMarginType(
     @Query('exchange') exchange?: string,
@@ -251,8 +367,18 @@ export class TradingController {
    */
   @Get('margin-type/:symbol')
   @ApiOperation({ summary: 'Get current margin type for a symbol' })
-  @ApiQuery({ name: 'exchange', required: false, enum: ['aster', 'hyperliquid'], example: 'hyperliquid' })
-  @ApiQuery({ name: 'tradingType', required: false, enum: ['futures', 'perpetual'], example: 'perpetual' })
+  @ApiQuery({
+    name: 'exchange',
+    required: false,
+    enum: ['aster', 'hyperliquid'],
+    example: 'hyperliquid',
+  })
+  @ApiQuery({
+    name: 'tradingType',
+    required: false,
+    enum: ['futures', 'perpetual'],
+    example: 'perpetual',
+  })
   @ApiResponse({ status: 200, description: 'Margin type retrieved successfully' })
   async getMarginType(
     @Param('symbol') symbol: string,
@@ -269,8 +395,18 @@ export class TradingController {
    */
   @Post('position-mode')
   @ApiOperation({ summary: 'Set position mode (one-way or hedge)' })
-  @ApiQuery({ name: 'exchange', required: false, enum: ['aster', 'hyperliquid'], example: 'hyperliquid' })
-  @ApiQuery({ name: 'tradingType', required: false, enum: ['futures', 'perpetual'], example: 'perpetual' })
+  @ApiQuery({
+    name: 'exchange',
+    required: false,
+    enum: ['aster', 'hyperliquid'],
+    example: 'hyperliquid',
+  })
+  @ApiQuery({
+    name: 'tradingType',
+    required: false,
+    enum: ['futures', 'perpetual'],
+    example: 'perpetual',
+  })
   @ApiResponse({ status: 200, description: 'Position mode set successfully' })
   async setPositionMode(
     @Query('exchange') exchange?: string,
@@ -287,8 +423,18 @@ export class TradingController {
    */
   @Get('position-mode')
   @ApiOperation({ summary: 'Get current position mode' })
-  @ApiQuery({ name: 'exchange', required: false, enum: ['aster', 'hyperliquid'], example: 'hyperliquid' })
-  @ApiQuery({ name: 'tradingType', required: false, enum: ['futures', 'perpetual'], example: 'perpetual' })
+  @ApiQuery({
+    name: 'exchange',
+    required: false,
+    enum: ['aster', 'hyperliquid'],
+    example: 'hyperliquid',
+  })
+  @ApiQuery({
+    name: 'tradingType',
+    required: false,
+    enum: ['futures', 'perpetual'],
+    example: 'perpetual',
+  })
   @ApiResponse({ status: 200, description: 'Position mode retrieved successfully' })
   async getPositionMode(
     @Query('exchange') exchange?: string,
@@ -304,8 +450,18 @@ export class TradingController {
    */
   @Post('position/margin')
   @ApiOperation({ summary: 'Add or reduce position margin (isolated positions only)' })
-  @ApiQuery({ name: 'exchange', required: false, enum: ['aster', 'hyperliquid'], example: 'hyperliquid' })
-  @ApiQuery({ name: 'tradingType', required: false, enum: ['futures', 'perpetual'], example: 'perpetual' })
+  @ApiQuery({
+    name: 'exchange',
+    required: false,
+    enum: ['aster', 'hyperliquid'],
+    example: 'hyperliquid',
+  })
+  @ApiQuery({
+    name: 'tradingType',
+    required: false,
+    enum: ['futures', 'perpetual'],
+    example: 'perpetual',
+  })
   @ApiResponse({ status: 200, description: 'Position margin modified successfully' })
   async modifyPositionMargin(
     @Query('exchange') exchange?: string,
@@ -322,8 +478,18 @@ export class TradingController {
    */
   @Post('stop-loss')
   @ApiOperation({ summary: 'Set stop loss for a position' })
-  @ApiQuery({ name: 'exchange', required: false, enum: ['aster', 'hyperliquid'], example: 'hyperliquid' })
-  @ApiQuery({ name: 'tradingType', required: false, enum: ['futures', 'perpetual'], example: 'perpetual' })
+  @ApiQuery({
+    name: 'exchange',
+    required: false,
+    enum: ['aster', 'hyperliquid'],
+    example: 'hyperliquid',
+  })
+  @ApiQuery({
+    name: 'tradingType',
+    required: false,
+    enum: ['futures', 'perpetual'],
+    example: 'perpetual',
+  })
   @ApiResponse({ status: 201, description: 'Stop loss set successfully' })
   async setStopLoss(
     @Query('exchange') exchange?: string,
@@ -340,8 +506,18 @@ export class TradingController {
    */
   @Post('take-profit')
   @ApiOperation({ summary: 'Set take profit for a position' })
-  @ApiQuery({ name: 'exchange', required: false, enum: ['aster', 'hyperliquid'], example: 'hyperliquid' })
-  @ApiQuery({ name: 'tradingType', required: false, enum: ['futures', 'perpetual'], example: 'perpetual' })
+  @ApiQuery({
+    name: 'exchange',
+    required: false,
+    enum: ['aster', 'hyperliquid'],
+    example: 'hyperliquid',
+  })
+  @ApiQuery({
+    name: 'tradingType',
+    required: false,
+    enum: ['futures', 'perpetual'],
+    example: 'perpetual',
+  })
   @ApiResponse({ status: 201, description: 'Take profit set successfully' })
   async setTakeProfit(
     @Query('exchange') exchange?: string,
@@ -358,8 +534,18 @@ export class TradingController {
    */
   @Delete('conditional-orders/:symbol')
   @ApiOperation({ summary: 'Cancel all stop loss and take profit orders for a symbol' })
-  @ApiQuery({ name: 'exchange', required: false, enum: ['aster', 'hyperliquid'], example: 'hyperliquid' })
-  @ApiQuery({ name: 'tradingType', required: false, enum: ['futures', 'perpetual'], example: 'perpetual' })
+  @ApiQuery({
+    name: 'exchange',
+    required: false,
+    enum: ['aster', 'hyperliquid'],
+    example: 'hyperliquid',
+  })
+  @ApiQuery({
+    name: 'tradingType',
+    required: false,
+    enum: ['futures', 'perpetual'],
+    example: 'perpetual',
+  })
   @ApiResponse({ status: 200, description: 'Conditional orders cancelled successfully' })
   async cancelAllConditionalOrders(
     @Param('symbol') symbol: string,
@@ -376,8 +562,18 @@ export class TradingController {
    */
   @Get('funding-rate')
   @ApiOperation({ summary: 'Get current funding rate' })
-  @ApiQuery({ name: 'exchange', required: false, enum: ['aster', 'hyperliquid'], example: 'hyperliquid' })
-  @ApiQuery({ name: 'tradingType', required: false, enum: ['futures', 'perpetual'], example: 'perpetual' })
+  @ApiQuery({
+    name: 'exchange',
+    required: false,
+    enum: ['aster', 'hyperliquid'],
+    example: 'hyperliquid',
+  })
+  @ApiQuery({
+    name: 'tradingType',
+    required: false,
+    enum: ['futures', 'perpetual'],
+    example: 'perpetual',
+  })
   @ApiQuery({ name: 'symbol', required: false, example: 'BTCUSDT' })
   @ApiResponse({ status: 200, description: 'Funding rate retrieved successfully' })
   async getFundingRate(
@@ -395,8 +591,18 @@ export class TradingController {
    */
   @Get('funding-history/:symbol')
   @ApiOperation({ summary: 'Get funding rate history' })
-  @ApiQuery({ name: 'exchange', required: false, enum: ['aster', 'hyperliquid'], example: 'hyperliquid' })
-  @ApiQuery({ name: 'tradingType', required: false, enum: ['futures', 'perpetual'], example: 'perpetual' })
+  @ApiQuery({
+    name: 'exchange',
+    required: false,
+    enum: ['aster', 'hyperliquid'],
+    example: 'hyperliquid',
+  })
+  @ApiQuery({
+    name: 'tradingType',
+    required: false,
+    enum: ['futures', 'perpetual'],
+    example: 'perpetual',
+  })
   @ApiQuery({ name: 'startTime', required: false, type: Number })
   @ApiQuery({ name: 'endTime', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
@@ -419,8 +625,18 @@ export class TradingController {
    */
   @Get('position/risk')
   @ApiOperation({ summary: 'Get position risk information' })
-  @ApiQuery({ name: 'exchange', required: false, enum: ['aster', 'hyperliquid'], example: 'hyperliquid' })
-  @ApiQuery({ name: 'tradingType', required: false, enum: ['futures', 'perpetual'], example: 'perpetual' })
+  @ApiQuery({
+    name: 'exchange',
+    required: false,
+    enum: ['aster', 'hyperliquid'],
+    example: 'hyperliquid',
+  })
+  @ApiQuery({
+    name: 'tradingType',
+    required: false,
+    enum: ['futures', 'perpetual'],
+    example: 'perpetual',
+  })
   @ApiQuery({ name: 'symbol', required: false, example: 'BTCUSDT' })
   @ApiResponse({ status: 200, description: 'Position risk retrieved successfully' })
   async getPositionRisk(
@@ -438,8 +654,18 @@ export class TradingController {
    */
   @Post('position/long')
   @ApiOperation({ summary: 'Open long position with market order' })
-  @ApiQuery({ name: 'exchange', required: false, enum: ['aster', 'hyperliquid'], example: 'hyperliquid' })
-  @ApiQuery({ name: 'tradingType', required: false, enum: ['futures', 'perpetual'], example: 'perpetual' })
+  @ApiQuery({
+    name: 'exchange',
+    required: false,
+    enum: ['aster', 'hyperliquid'],
+    example: 'hyperliquid',
+  })
+  @ApiQuery({
+    name: 'tradingType',
+    required: false,
+    enum: ['futures', 'perpetual'],
+    example: 'perpetual',
+  })
   @ApiResponse({ status: 201, description: 'Long position opened successfully' })
   async openLong(
     @Query('exchange') exchange?: string,
@@ -456,8 +682,18 @@ export class TradingController {
    */
   @Post('position/short')
   @ApiOperation({ summary: 'Open short position with market order' })
-  @ApiQuery({ name: 'exchange', required: false, enum: ['aster', 'hyperliquid'], example: 'hyperliquid' })
-  @ApiQuery({ name: 'tradingType', required: false, enum: ['futures', 'perpetual'], example: 'perpetual' })
+  @ApiQuery({
+    name: 'exchange',
+    required: false,
+    enum: ['aster', 'hyperliquid'],
+    example: 'hyperliquid',
+  })
+  @ApiQuery({
+    name: 'tradingType',
+    required: false,
+    enum: ['futures', 'perpetual'],
+    example: 'perpetual',
+  })
   @ApiResponse({ status: 201, description: 'Short position opened successfully' })
   async openShort(
     @Query('exchange') exchange?: string,
@@ -474,8 +710,18 @@ export class TradingController {
    */
   @Post('position/close-long')
   @ApiOperation({ summary: 'Close long position' })
-  @ApiQuery({ name: 'exchange', required: false, enum: ['aster', 'hyperliquid'], example: 'hyperliquid' })
-  @ApiQuery({ name: 'tradingType', required: false, enum: ['futures', 'perpetual'], example: 'perpetual' })
+  @ApiQuery({
+    name: 'exchange',
+    required: false,
+    enum: ['aster', 'hyperliquid'],
+    example: 'hyperliquid',
+  })
+  @ApiQuery({
+    name: 'tradingType',
+    required: false,
+    enum: ['futures', 'perpetual'],
+    example: 'perpetual',
+  })
   @ApiResponse({ status: 200, description: 'Long position closed successfully' })
   async closeLong(
     @Query('exchange') exchange?: string,
@@ -492,8 +738,18 @@ export class TradingController {
    */
   @Post('position/close-short')
   @ApiOperation({ summary: 'Close short position' })
-  @ApiQuery({ name: 'exchange', required: false, enum: ['aster', 'hyperliquid'], example: 'hyperliquid' })
-  @ApiQuery({ name: 'tradingType', required: false, enum: ['futures', 'perpetual'], example: 'perpetual' })
+  @ApiQuery({
+    name: 'exchange',
+    required: false,
+    enum: ['aster', 'hyperliquid'],
+    example: 'hyperliquid',
+  })
+  @ApiQuery({
+    name: 'tradingType',
+    required: false,
+    enum: ['futures', 'perpetual'],
+    example: 'perpetual',
+  })
   @ApiResponse({ status: 200, description: 'Short position closed successfully' })
   async closeShort(
     @Query('exchange') exchange?: string,
@@ -510,8 +766,18 @@ export class TradingController {
    */
   @Post('position/close')
   @ApiOperation({ summary: 'Close position (any side)' })
-  @ApiQuery({ name: 'exchange', required: false, enum: ['aster', 'hyperliquid'], example: 'hyperliquid' })
-  @ApiQuery({ name: 'tradingType', required: false, enum: ['futures', 'perpetual'], example: 'perpetual' })
+  @ApiQuery({
+    name: 'exchange',
+    required: false,
+    enum: ['aster', 'hyperliquid'],
+    example: 'hyperliquid',
+  })
+  @ApiQuery({
+    name: 'tradingType',
+    required: false,
+    enum: ['futures', 'perpetual'],
+    example: 'perpetual',
+  })
   @ApiResponse({ status: 200, description: 'Position closed successfully' })
   async closePosition(
     @Query('exchange') exchange?: string,
@@ -528,8 +794,18 @@ export class TradingController {
    */
   @Post('positions/close-all')
   @ApiOperation({ summary: 'Close all open positions' })
-  @ApiQuery({ name: 'exchange', required: false, enum: ['aster', 'hyperliquid'], example: 'hyperliquid' })
-  @ApiQuery({ name: 'tradingType', required: false, enum: ['futures', 'perpetual'], example: 'perpetual' })
+  @ApiQuery({
+    name: 'exchange',
+    required: false,
+    enum: ['aster', 'hyperliquid'],
+    example: 'hyperliquid',
+  })
+  @ApiQuery({
+    name: 'tradingType',
+    required: false,
+    enum: ['futures', 'perpetual'],
+    example: 'perpetual',
+  })
   @ApiResponse({ status: 200, description: 'All positions closed successfully' })
   async closeAllPositions(
     @Query('exchange') exchange?: string,
@@ -545,8 +821,18 @@ export class TradingController {
    */
   @Post('quick/buy')
   @ApiOperation({ summary: 'Quick market buy' })
-  @ApiQuery({ name: 'exchange', required: false, enum: ['aster', 'hyperliquid'], example: 'hyperliquid' })
-  @ApiQuery({ name: 'tradingType', required: false, enum: ['futures', 'perpetual'], example: 'perpetual' })
+  @ApiQuery({
+    name: 'exchange',
+    required: false,
+    enum: ['aster', 'hyperliquid'],
+    example: 'hyperliquid',
+  })
+  @ApiQuery({
+    name: 'tradingType',
+    required: false,
+    enum: ['futures', 'perpetual'],
+    example: 'perpetual',
+  })
   @ApiResponse({ status: 201, description: 'Market buy executed successfully' })
   async marketBuy(
     @Query('exchange') exchange?: string,
@@ -563,8 +849,18 @@ export class TradingController {
    */
   @Post('quick/sell')
   @ApiOperation({ summary: 'Quick market sell' })
-  @ApiQuery({ name: 'exchange', required: false, enum: ['aster', 'hyperliquid'], example: 'hyperliquid' })
-  @ApiQuery({ name: 'tradingType', required: false, enum: ['futures', 'perpetual'], example: 'perpetual' })
+  @ApiQuery({
+    name: 'exchange',
+    required: false,
+    enum: ['aster', 'hyperliquid'],
+    example: 'hyperliquid',
+  })
+  @ApiQuery({
+    name: 'tradingType',
+    required: false,
+    enum: ['futures', 'perpetual'],
+    example: 'perpetual',
+  })
   @ApiResponse({ status: 201, description: 'Market sell executed successfully' })
   async marketSell(
     @Query('exchange') exchange?: string,

@@ -3,7 +3,7 @@
  * All exchange balance services must implement this interface
  */
 
-import { ApiResponse, Balance, Position } from '../types/exchange.types';
+import { ApiResponse, Balance } from '../types/exchange.types';
 
 export interface IBaseBalanceService {
   /**
@@ -19,10 +19,11 @@ export interface IBaseBalanceService {
   /**
    * Get total portfolio value in USD
    */
-  getPortfolioValue(): Promise<ApiResponse<{
-    totalValue: string;
-    availableBalance: string;
-    usedMargin?: string;
-  }>>;
+  getPortfolioValue(): Promise<
+    ApiResponse<{
+      totalValue: string;
+      availableBalance: string;
+      usedMargin?: string;
+    }>
+  >;
 }
-

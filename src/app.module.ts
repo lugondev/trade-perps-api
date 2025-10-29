@@ -11,20 +11,20 @@ import { ExchangesModule } from './exchanges/exchanges.module';
 import { ApiModule } from './api/api.module';
 
 @Module({
-	imports: [
-		ConfigModule.forRoot({
-			isGlobal: true,
-			envFilePath: '.env',
-			load: [appConfig, asterConfig, hyperliquidConfig, tradingConfig],
-		}),
-		ScheduleModule.forRoot(),
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: '.env',
+      load: [appConfig, asterConfig, hyperliquidConfig, tradingConfig],
+    }),
+    ScheduleModule.forRoot(),
 
-		// New architecture
-		CommonModule,
-		ExchangesModule,
-		ApiModule,
-	],
-	controllers: [AppController],
-	providers: [AppService],
+    // New architecture
+    CommonModule,
+    ExchangesModule,
+    ApiModule,
+  ],
+  controllers: [AppController],
+  providers: [AppService],
 })
-export class AppModule { }
+export class AppModule {}

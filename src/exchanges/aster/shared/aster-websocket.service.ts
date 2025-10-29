@@ -7,302 +7,303 @@ import { AsterConfig } from '../../../config/aster.config';
 
 @Injectable()
 export class AsterWebSocketService implements OnModuleDestroy {
-	private readonly logger = new Logger(AsterWebSocketService.name);
-	private ws: WebSocket | null = null;
-	private readonly wsUrl: string;
-	private readonly messageSubject = new Subject<WebSocketMessage>();
-	private readonly tickerSubject = new Subject<TickerData>();
-	private readonly orderBookSubject = new Subject<OrderBookData>();
-	private reconnectInterval: NodeJS.Timeout | null = null;
-	private pingInterval: NodeJS.Timeout | null = null;
-	private isConnected = false;
-	private subscriptions: Set<string> = new Set();
-	private readonly asterConfig: AsterConfig;
+  private readonly logger = new Logger(AsterWebSocketService.name);
+  private ws: WebSocket | null = null;
+  private readonly wsUrl: string;
+  private readonly messageSubject = new Subject<WebSocketMessage>();
+  private readonly tickerSubject = new Subject<TickerData>();
+  private readonly orderBookSubject = new Subject<OrderBookData>();
+  private reconnectInterval: NodeJS.Timeout | null = null;
+  private pingInterval: NodeJS.Timeout | null = null;
+  private isConnected = false;
+  private subscriptions: Set<string> = new Set();
+  private readonly asterConfig: AsterConfig;
 
-	constructor(private configService: ConfigService) {
-		// Load Aster configuration
-		this.asterConfig = this.configService.get<AsterConfig>('aster') as AsterConfig;
-		this.wsUrl = this.asterConfig.wsUrl;
-		this.logger.log(`WebSocket URL configured: ${this.wsUrl}`);
-	}
+  constructor(private configService: ConfigService) {
+    // Load Aster configuration
+    this.asterConfig = this.configService.get<AsterConfig>('aster') as AsterConfig;
+    this.wsUrl = this.asterConfig.wsUrl;
+    this.logger.log(`WebSocket URL configured: ${this.wsUrl}`);
+  }
 
-	/**
-	 * Connect to WebSocket
-	 */
-	async connect(): Promise<void> {
-		if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-			this.logger.warn('WebSocket is already connected');
-			return;
-		}
+  /**
+   * Connect to WebSocket
+   */
+  async connect(): Promise<void> {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.logger.warn('WebSocket is already connected');
+      return;
+    }
 
-		try {
-			this.logger.log(`Connecting to WebSocket: ${this.wsUrl}`);
+    try {
+      this.logger.log(`Connecting to WebSocket: ${this.wsUrl}`);
 
-			this.ws = new WebSocket(this.wsUrl);
+      this.ws = new WebSocket(this.wsUrl);
 
-			this.ws.on('open', () => {
-				this.logger.log('WebSocket connected successfully');
-				this.isConnected = true;
-				this.startPingInterval();
-			});
+      this.ws.on('open', () => {
+        this.logger.log('WebSocket connected successfully');
+        this.isConnected = true;
+        this.startPingInterval();
+      });
 
-			this.ws.on('message', (data: WebSocket.Data) => {
-				this.handleMessage(data);
-			});
+      this.ws.on('message', (data: WebSocket.Data) => {
+        this.handleMessage(data);
+      });
 
-			this.ws.on('close', (code: number, reason: string) => {
-				this.logger.warn(`WebSocket closed: ${code} - ${reason}`);
-				this.isConnected = false;
-				this.cleanup();
-				this.scheduleReconnect();
-			});
+      this.ws.on('close', (code: number, reason: string) => {
+        this.logger.warn(`WebSocket closed: ${code} - ${reason}`);
+        this.isConnected = false;
+        this.cleanup();
+        this.scheduleReconnect();
+      });
 
-			this.ws.on('error', (error: Error) => {
-				this.logger.error('WebSocket error:', error);
-				this.isConnected = false;
-			});
+      this.ws.on('error', (error: Error) => {
+        this.logger.error('WebSocket error:', error);
+        this.isConnected = false;
+      });
 
-			this.ws.on('pong', () => {
-				this.logger.debug('Received pong from server');
-			});
+      this.ws.on('pong', () => {
+        this.logger.debug('Received pong from server');
+      });
+    } catch (error) {
+      this.logger.error('Failed to connect to WebSocket:', error);
+      this.scheduleReconnect();
+    }
+  }
 
-		} catch (error) {
-			this.logger.error('Failed to connect to WebSocket:', error);
-			this.scheduleReconnect();
-		}
-	}
+  /**
+   * Disconnect from WebSocket
+   */
+  disconnect(): void {
+    this.logger.log('Disconnecting WebSocket');
 
-	/**
-	 * Disconnect from WebSocket
-	 */
-	disconnect(): void {
-		this.logger.log('Disconnecting WebSocket');
+    if (this.reconnectInterval) {
+      clearTimeout(this.reconnectInterval);
+      this.reconnectInterval = null;
+    }
 
-		if (this.reconnectInterval) {
-			clearTimeout(this.reconnectInterval);
-			this.reconnectInterval = null;
-		}
+    this.cleanup();
 
-		this.cleanup();
+    if (this.ws) {
+      this.ws.close();
+      this.ws = null;
+    }
 
-		if (this.ws) {
-			this.ws.close();
-			this.ws = null;
-		}
+    this.isConnected = false;
+    this.subscriptions.clear();
+  }
 
-		this.isConnected = false;
-		this.subscriptions.clear();
-	}
+  /**
+   * Subscribe to ticker updates for a symbol
+   */
+  subscribeTicker(symbol: string): void {
+    const streamName = `${symbol.toLowerCase()}@ticker`;
 
-	/**
-	 * Subscribe to ticker updates for a symbol
-	 */
-	subscribeTicker(symbol: string): void {
-		const streamName = `${symbol.toLowerCase()}@ticker`;
+    if (this.subscriptions.has(streamName)) {
+      this.logger.debug(`Already subscribed to ticker for ${symbol}`);
+      return;
+    }
 
-		if (this.subscriptions.has(streamName)) {
-			this.logger.debug(`Already subscribed to ticker for ${symbol}`);
-			return;
-		}
+    this.subscribe([streamName]);
+    this.subscriptions.add(streamName);
+    this.logger.log(`Subscribed to ticker for ${symbol}`);
+  }
 
-		this.subscribe([streamName]);
-		this.subscriptions.add(streamName);
-		this.logger.log(`Subscribed to ticker for ${symbol}`);
-	}
+  /**
+   * Subscribe to order book updates for a symbol
+   */
+  subscribeOrderBook(symbol: string, depth: number = 20): void {
+    const streamName = `${symbol.toLowerCase()}@depth${depth}`;
 
-	/**
-	 * Subscribe to order book updates for a symbol
-	 */
-	subscribeOrderBook(symbol: string, depth: number = 20): void {
-		const streamName = `${symbol.toLowerCase()}@depth${depth}`;
+    if (this.subscriptions.has(streamName)) {
+      this.logger.debug(`Already subscribed to order book for ${symbol}`);
+      return;
+    }
 
-		if (this.subscriptions.has(streamName)) {
-			this.logger.debug(`Already subscribed to order book for ${symbol}`);
-			return;
-		}
+    this.subscribe([streamName]);
+    this.subscriptions.add(streamName);
+    this.logger.log(`Subscribed to order book for ${symbol} with depth ${depth}`);
+  }
 
-		this.subscribe([streamName]);
-		this.subscriptions.add(streamName);
-		this.logger.log(`Subscribed to order book for ${symbol} with depth ${depth}`);
-	}
+  /**
+   * Generic subscribe method for streams
+   */
+  private subscribe(streams: string[]): void {
+    if (!this.isWebSocketConnected()) {
+      this.logger.warn('Cannot subscribe: WebSocket not connected');
+      return;
+    }
 
-	/**
-	 * Generic subscribe method for streams
-	 */
-	private subscribe(streams: string[]): void {
-		if (!this.isWebSocketConnected()) {
-			this.logger.warn('Cannot subscribe: WebSocket not connected');
-			return;
-		}
+    this.sendMessage({
+      method: 'SUBSCRIBE',
+      params: streams,
+      id: Date.now(),
+    });
+  }
 
-		this.sendMessage({
-			method: 'SUBSCRIBE',
-			params: streams,
-			id: Date.now(),
-		});
-	}
+  /**
+   * Get observable for all WebSocket messages
+   */
+  getMessages(): Observable<WebSocketMessage> {
+    return this.messageSubject.asObservable();
+  }
 
-	/**
-	 * Get observable for all WebSocket messages
-	 */
-	getMessages(): Observable<WebSocketMessage> {
-		return this.messageSubject.asObservable();
-	}
+  /**
+   * Get observable for ticker data
+   */
+  getTickerData(): Observable<TickerData> {
+    return this.tickerSubject.asObservable();
+  }
 
-	/**
-	 * Get observable for ticker data
-	 */
-	getTickerData(): Observable<TickerData> {
-		return this.tickerSubject.asObservable();
-	}
+  /**
+   * Get observable for order book data
+   */
+  getOrderBookData(): Observable<OrderBookData> {
+    return this.orderBookSubject.asObservable();
+  }
 
-	/**
-	 * Get observable for order book data
-	 */
-	getOrderBookData(): Observable<OrderBookData> {
-		return this.orderBookSubject.asObservable();
-	}
+  /**
+   * Check if WebSocket is connected
+   */
+  isWebSocketConnected(): boolean {
+    return this.isConnected && this.ws?.readyState === WebSocket.OPEN;
+  }
 
-	/**
-	 * Check if WebSocket is connected
-	 */
-	isWebSocketConnected(): boolean {
-		return this.isConnected && this.ws?.readyState === WebSocket.OPEN;
-	}
+  /**
+   * Handle incoming WebSocket messages
+   */
+  private handleMessage(data: WebSocket.Data): void {
+    try {
+      const message = JSON.parse(data.toString());
 
-	/**
-	 * Handle incoming WebSocket messages
-	 */
-	private handleMessage(data: WebSocket.Data): void {
-		try {
-			const message = JSON.parse(data.toString());
+      // Emit raw message
+      const wsMessage: WebSocketMessage = {
+        event: message.e || message.event || 'unknown',
+        data: message,
+        timestamp: Date.now(),
+      };
 
-			// Emit raw message
-			const wsMessage: WebSocketMessage = {
-				event: message.e || message.event || 'unknown',
-				data: message,
-				timestamp: Date.now(),
-			};
+      this.messageSubject.next(wsMessage);
 
-			this.messageSubject.next(wsMessage);
+      // Handle specific message types
+      if (message.e === '24hrTicker') {
+        this.handleTickerMessage(message);
+      } else if (message.e === 'depthUpdate') {
+        this.handleOrderBookMessage(message);
+      }
+    } catch (error) {
+      this.logger.error('Error parsing WebSocket message:', error);
+    }
+  }
 
-			// Handle specific message types
-			if (message.e === '24hrTicker') {
-				this.handleTickerMessage(message);
-			} else if (message.e === 'depthUpdate') {
-				this.handleOrderBookMessage(message);
-			}
+  /**
+   * Handle ticker messages
+   */
+  private handleTickerMessage(message: any): void {
+    try {
+      const tickerData: TickerData = {
+        symbol: message.s,
+        price: message.c,
+        priceChange: message.p,
+        priceChangePercent: message.P,
+        high: message.h,
+        low: message.l,
+        volume: message.v,
+        timestamp: message.E,
+      };
 
-		} catch (error) {
-			this.logger.error('Error parsing WebSocket message:', error);
-		}
-	}
+      this.tickerSubject.next(tickerData);
+      this.logger.debug('Processed ticker data:', tickerData.symbol);
+    } catch (error) {
+      this.logger.error('Error processing ticker message:', error);
+    }
+  }
 
-	/**
-	 * Handle ticker messages
-	 */
-	private handleTickerMessage(message: any): void {
-		try {
-			const tickerData: TickerData = {
-				symbol: message.s,
-				price: message.c,
-				priceChange: message.p,
-				priceChangePercent: message.P,
-				high: message.h,
-				low: message.l,
-				volume: message.v,
-				timestamp: message.E,
-			};
+  /**
+   * Handle order book messages
+   */
+  private handleOrderBookMessage(message: any): void {
+    try {
+      const orderBookData: OrderBookData = {
+        symbol: message.s,
+        bids: message.b || [],
+        asks: message.a || [],
+        timestamp: message.E,
+      };
 
-			this.tickerSubject.next(tickerData);
-			this.logger.debug('Processed ticker data:', tickerData.symbol);
-		} catch (error) {
-			this.logger.error('Error processing ticker message:', error);
-		}
-	}
+      this.orderBookSubject.next(orderBookData);
+      this.logger.debug('Processed order book data:', orderBookData.symbol);
+    } catch (error) {
+      this.logger.error('Error processing order book message:', error);
+    }
+  }
 
-	/**
-	 * Handle order book messages
-	 */
-	private handleOrderBookMessage(message: any): void {
-		try {
-			const orderBookData: OrderBookData = {
-				symbol: message.s,
-				bids: message.b || [],
-				asks: message.a || [],
-				timestamp: message.E,
-			};
+  /**
+   * Send message to WebSocket
+   */
+  private sendMessage(message: any): void {
+    if (!this.isWebSocketConnected()) {
+      this.logger.warn('Cannot send message: WebSocket not connected');
+      return;
+    }
 
-			this.orderBookSubject.next(orderBookData);
-			this.logger.debug('Processed order book data:', orderBookData.symbol);
-		} catch (error) {
-			this.logger.error('Error processing order book message:', error);
-		}
-	}
+    try {
+      this.ws!.send(JSON.stringify(message));
+      this.logger.debug('Sent WebSocket message:', message);
+    } catch (error) {
+      this.logger.error('Error sending WebSocket message:', error);
+    }
+  }
 
-	/**
-	 * Send message to WebSocket
-	 */
-	private sendMessage(message: any): void {
-		if (!this.isWebSocketConnected()) {
-			this.logger.warn('Cannot send message: WebSocket not connected');
-			return;
-		}
+  /**
+   * Start ping interval to keep connection alive
+   */
+  private startPingInterval(): void {
+    if (this.pingInterval) {
+      clearInterval(this.pingInterval);
+    }
 
-		try {
-			this.ws!.send(JSON.stringify(message));
-			this.logger.debug('Sent WebSocket message:', message);
-		} catch (error) {
-			this.logger.error('Error sending WebSocket message:', error);
-		}
-	}
+    // Send ping every 5 minutes
+    this.pingInterval = setInterval(
+      () => {
+        if (this.isWebSocketConnected()) {
+          this.ws!.ping();
+          this.logger.debug('Sent ping to server');
+        }
+      },
+      5 * 60 * 1000,
+    );
+  }
 
-	/**
-	 * Start ping interval to keep connection alive
-	 */
-	private startPingInterval(): void {
-		if (this.pingInterval) {
-			clearInterval(this.pingInterval);
-		}
+  /**
+   * Schedule reconnection
+   */
+  private scheduleReconnect(): void {
+    if (this.reconnectInterval) {
+      return; // Already scheduled
+    }
 
-		// Send ping every 5 minutes
-		this.pingInterval = setInterval(() => {
-			if (this.isWebSocketConnected()) {
-				this.ws!.ping();
-				this.logger.debug('Sent ping to server');
-			}
-		}, 5 * 60 * 1000);
-	}
+    this.reconnectInterval = setTimeout(() => {
+      this.logger.log('Attempting to reconnect WebSocket...');
+      this.reconnectInterval = null;
+      this.connect();
+    }, 5000); // Reconnect after 5 seconds
+  }
 
-	/**
-	 * Schedule reconnection
-	 */
-	private scheduleReconnect(): void {
-		if (this.reconnectInterval) {
-			return; // Already scheduled
-		}
+  /**
+   * Cleanup resources
+   */
+  private cleanup(): void {
+    if (this.pingInterval) {
+      clearInterval(this.pingInterval);
+      this.pingInterval = null;
+    }
+  }
 
-		this.reconnectInterval = setTimeout(() => {
-			this.logger.log('Attempting to reconnect WebSocket...');
-			this.reconnectInterval = null;
-			this.connect();
-		}, 5000); // Reconnect after 5 seconds
-	}
-
-	/**
-	 * Cleanup resources
-	 */
-	private cleanup(): void {
-		if (this.pingInterval) {
-			clearInterval(this.pingInterval);
-			this.pingInterval = null;
-		}
-	}
-
-	/**
-	 * Module cleanup
-	 */
-	onModuleDestroy(): void {
-		this.disconnect();
-	}
+  /**
+   * Module cleanup
+   */
+  onModuleDestroy(): void {
+    this.disconnect();
+  }
 }
