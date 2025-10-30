@@ -6,9 +6,7 @@ import {
   LimitOrderParams,
   CancelOrderParams,
   SetLeverageParams,
-  SetMarginTypeParams,
   SetPositionModeParams,
-  ModifyPositionMarginParams,
   SetStopLossParams,
   SetTakeProfitParams,
 } from '../../../../common/interfaces';
@@ -17,6 +15,7 @@ import { OrderPlacementService } from './order-placement.service';
 import { OrderManagementService } from './order-management.service';
 import { PositionService } from './position.service';
 import { RiskManagementService } from './risk-management.service';
+import { HyperliquidPerpMarketService } from './perp-market.service';
 import { HyperliquidApiService } from '../../shared/hyperliquid-api.service';
 import { formatSymbol } from './perp-market.utils';
 
@@ -30,6 +29,7 @@ export class HyperliquidPerpTradingService implements IFuturesTradingService {
     private readonly positionService: PositionService,
     private readonly riskManagementService: RiskManagementService,
     private readonly apiService: HyperliquidApiService,
+    private readonly marketService: HyperliquidPerpMarketService,
   ) {}
 
   /**
@@ -132,19 +132,7 @@ export class HyperliquidPerpTradingService implements IFuturesTradingService {
     return this.positionService.getLeverage(symbol);
   }
 
-  /**
-   * Set margin type (ISOLATED or CROSSED)
-   */
-  async setMarginType(params: SetMarginTypeParams): Promise<ApiResponse<any>> {
-    return this.positionService.setMarginType(params);
-  }
-
-  /**
-   * Get current margin type
-   */
-  async getMarginType(symbol: string): Promise<ApiResponse<'ISOLATED' | 'CROSSED'>> {
-    return this.positionService.getMarginType(symbol);
-  }
+  // Margin-related methods removed (margin is not supported)
 
   /**
    * Set position mode (one-way or hedge mode)
@@ -161,12 +149,7 @@ export class HyperliquidPerpTradingService implements IFuturesTradingService {
     return this.positionService.getPositionMode();
   }
 
-  /**
-   * Modify position margin (add or reduce)
-   */
-  async modifyPositionMargin(params: ModifyPositionMarginParams): Promise<ApiResponse<any>> {
-    return this.positionService.modifyPositionMargin(params);
-  }
+  // Margin-related methods removed (margin is not supported)
 
   /**
    * Set stop loss for position
@@ -473,10 +456,135 @@ export class HyperliquidPerpTradingService implements IFuturesTradingService {
   }
 
   /**
+   * Quick long by USD value with required TP/SL/leverage
+   */
+  async quickLong(
+    symbol: string,
+    usdValue: number,
+    stopLossPercent: number,
+    takeProfitPercent: number,
+    leverage: number,
+  ): Promise<ApiResponse<any>> {
+    try {
+      // set leverage
+      await this.positionService.setLeverage({ symbol, leverage });
+
+      // get current price
+      const priceResponse = await this.marketService.getCurrentPrice(symbol);
+      if (!priceResponse.success || !priceResponse.data) {
+        return priceResponse;
+      }
+
+      const currentPrice = parseFloat(priceResponse.data);
+      const quantity = ((usdValue * leverage) / currentPrice).toFixed(8);
+
+      // place entry
+      const mainOrder = await this.orderPlacementService.marketBuy(symbol, quantity);
+      if (!mainOrder.success) return mainOrder;
+
+      // compute SL/TP
+      const stopLossPrice = (currentPrice * (1 - stopLossPercent / 100)).toFixed(2);
+      const takeProfitPrice = (currentPrice * (1 + takeProfitPercent / 100)).toFixed(2);
+
+      const stopLoss = await this.riskManagementService.setStopLoss({
+        symbol,
+        stopPrice: stopLossPrice,
+        quantity,
+        // side will be inferred inside riskManagementService
+      });
+
+      const takeProfit = await this.riskManagementService.setTakeProfit({
+        symbol,
+        takeProfitPrice,
+        quantity,
+      });
+
+      return {
+        success: true,
+        data: { mainOrder, stopLoss, takeProfit },
+        timestamp: Date.now(),
+        exchange: 'hyperliquid',
+        tradingType: 'perpetual',
+      };
+    } catch (error: any) {
+      this.logger.error('Error in quick long:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to execute quick long',
+        timestamp: Date.now(),
+        exchange: 'hyperliquid',
+        tradingType: 'perpetual',
+      };
+    }
+  }
+
+  /**
    * Open short position with market order
    */
   async openShort(symbol: string, quantity: string): Promise<ApiResponse<Order>> {
     return this.orderPlacementService.marketSell(symbol, quantity);
+  }
+
+  /**
+   * Quick short by USD value with required TP/SL/leverage
+   */
+  async quickShort(
+    symbol: string,
+    usdValue: number,
+    stopLossPercent: number,
+    takeProfitPercent: number,
+    leverage: number,
+  ): Promise<ApiResponse<any>> {
+    try {
+      // set leverage
+      await this.positionService.setLeverage({ symbol, leverage });
+
+      // get current price
+      const priceResponse = await this.marketService.getCurrentPrice(symbol);
+      if (!priceResponse.success || !priceResponse.data) {
+        return priceResponse;
+      }
+
+      const currentPrice = parseFloat(priceResponse.data);
+      const quantity = ((usdValue * leverage) / currentPrice).toFixed(8);
+
+      // place entry
+      const mainOrder = await this.orderPlacementService.marketSell(symbol, quantity);
+      if (!mainOrder.success) return mainOrder;
+
+      // compute SL/TP
+      const stopLossPrice = (currentPrice * (1 + stopLossPercent / 100)).toFixed(2);
+      const takeProfitPrice = (currentPrice * (1 - takeProfitPercent / 100)).toFixed(2);
+
+      const stopLoss = await this.riskManagementService.setStopLoss({
+        symbol,
+        stopPrice: stopLossPrice,
+        quantity,
+      });
+
+      const takeProfit = await this.riskManagementService.setTakeProfit({
+        symbol,
+        takeProfitPrice,
+        quantity,
+      });
+
+      return {
+        success: true,
+        data: { mainOrder, stopLoss, takeProfit },
+        timestamp: Date.now(),
+        exchange: 'hyperliquid',
+        tradingType: 'perpetual',
+      };
+    } catch (error: any) {
+      this.logger.error('Error in quick short:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to execute quick short',
+        timestamp: Date.now(),
+        exchange: 'hyperliquid',
+        tradingType: 'perpetual',
+      };
+    }
   }
 
   /**

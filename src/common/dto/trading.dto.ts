@@ -152,22 +152,19 @@ export class QuickLongShortDto {
   usdValue: number;
 
   @ApiPropertyOptional({ example: 5, description: 'Stop loss percentage (default: 5%)' })
-  @IsOptional()
   @IsNumber()
   @Min(0)
-  stopLossPercent?: number;
+  stopLossPercent: number;
 
   @ApiPropertyOptional({ example: 10, description: 'Take profit percentage (default: 10%)' })
-  @IsOptional()
   @IsNumber()
   @Min(0)
-  takeProfitPercent?: number;
+  takeProfitPercent: number;
 
   @ApiPropertyOptional({ example: 10, description: 'Leverage (default: 10x)' })
-  @IsOptional()
   @IsNumber()
   @Min(1)
-  leverage?: number;
+  leverage: number;
 }
 
 export class SetLeverageDto {
@@ -211,15 +208,7 @@ export class ClosePositionDto {
 /**
  * Set margin type DTO
  */
-export class SetMarginTypeDto {
-  @ApiProperty({ example: 'BTCUSDT', description: 'Trading symbol' })
-  @IsString()
-  symbol: string;
-
-  @ApiProperty({ enum: ['ISOLATED', 'CROSSED'], example: 'ISOLATED', description: 'Margin type' })
-  @IsEnum(['ISOLATED', 'CROSSED'])
-  marginType: 'ISOLATED' | 'CROSSED';
-}
+// Margin-related DTO removed (margin is not supported)
 
 /**
  * Set position mode DTO
@@ -233,25 +222,7 @@ export class SetPositionModeDto {
 /**
  * Modify position margin DTO
  */
-export class ModifyPositionMarginDto {
-  @ApiProperty({ example: 'BTCUSDT', description: 'Trading symbol' })
-  @IsString()
-  symbol: string;
-
-  @ApiProperty({ example: '100', description: 'Amount to add/reduce' })
-  @IsString()
-  amount: string;
-
-  @ApiProperty({ enum: [1, 2], example: 1, description: '1: add margin, 2: reduce margin' })
-  @IsNumber()
-  @IsEnum([1, 2])
-  type: 1 | 2;
-
-  @ApiPropertyOptional({ enum: PositionSide, description: 'Position side (for hedge mode)' })
-  @IsOptional()
-  @IsEnum(PositionSide)
-  positionSide?: PositionSide;
-}
+// Margin-related DTO removed (margin is not supported)
 
 /**
  * Set stop loss DTO

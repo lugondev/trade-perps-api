@@ -82,8 +82,7 @@
       "<rootDir>/src/",
       "<rootDir>/test/"
     ]
-  }
-  ,
+  },
   "pnpm": {
     "overrides": {
       "elliptic": "6.6.1",

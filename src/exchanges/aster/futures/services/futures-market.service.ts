@@ -39,7 +39,7 @@ export class AsterFuturesMarketService implements IFuturesMarketService {
           data: response.data.price || '0',
           timestamp: Date.now(),
           exchange: 'aster',
-          tradingType: 'futures',
+          tradingType: 'perpetual',
         };
       }
 
@@ -72,7 +72,7 @@ export class AsterFuturesMarketService implements IFuturesMarketService {
           data: prices,
           timestamp: Date.now(),
           exchange: 'aster',
-          tradingType: 'futures',
+          tradingType: 'perpetual',
         };
       }
 
@@ -128,7 +128,7 @@ export class AsterFuturesMarketService implements IFuturesMarketService {
           data: orderBook,
           timestamp: Date.now(),
           exchange: 'aster',
-          tradingType: 'futures',
+          tradingType: 'perpetual',
         };
       }
 
@@ -168,7 +168,7 @@ export class AsterFuturesMarketService implements IFuturesMarketService {
           data: trades,
           timestamp: Date.now(),
           exchange: 'aster',
-          tradingType: 'futures',
+          tradingType: 'perpetual',
         };
       }
 
@@ -216,7 +216,7 @@ export class AsterFuturesMarketService implements IFuturesMarketService {
           data: candles,
           timestamp: Date.now(),
           exchange: 'aster',
-          tradingType: 'futures',
+          tradingType: 'perpetual',
         };
       }
 
@@ -245,7 +245,7 @@ export class AsterFuturesMarketService implements IFuturesMarketService {
           data: symbols,
           timestamp: Date.now(),
           exchange: 'aster',
-          tradingType: 'futures',
+          tradingType: 'perpetual',
         };
       }
 
@@ -369,7 +369,7 @@ export class AsterFuturesMarketService implements IFuturesMarketService {
           data: symbol ? data[0] : data,
           timestamp: Date.now(),
           exchange: 'aster',
-          tradingType: 'futures',
+          tradingType: 'perpetual',
         };
       }
 
@@ -414,7 +414,7 @@ export class AsterFuturesMarketService implements IFuturesMarketService {
           data: fundingRates,
           timestamp: Date.now(),
           exchange: 'aster',
-          tradingType: 'futures',
+          tradingType: 'perpetual',
         };
       }
 
@@ -441,7 +441,7 @@ export class AsterFuturesMarketService implements IFuturesMarketService {
         ...response,
         timestamp: Date.now(),
         exchange: 'aster',
-        tradingType: 'futures',
+        tradingType: 'perpetual',
       };
     } catch (error) {
       this.logger.error('Error getting mark price:', error);
@@ -466,7 +466,7 @@ export class AsterFuturesMarketService implements IFuturesMarketService {
           data: response.data.indexPrice,
           timestamp: Date.now(),
           exchange: 'aster',
-          tradingType: 'futures',
+          tradingType: 'perpetual',
         };
       }
 
@@ -492,7 +492,7 @@ export class AsterFuturesMarketService implements IFuturesMarketService {
         ...response,
         timestamp: Date.now(),
         exchange: 'aster',
-        tradingType: 'futures',
+        tradingType: 'perpetual',
       };
     } catch (error) {
       this.logger.error('Error getting open interest:', error);
@@ -529,7 +529,7 @@ export class AsterFuturesMarketService implements IFuturesMarketService {
         ...response,
         timestamp: Date.now(),
         exchange: 'aster',
-        tradingType: 'futures',
+        tradingType: 'perpetual',
       };
     } catch (error) {
       this.logger.error('Error getting open interest history:', error);
@@ -566,7 +566,7 @@ export class AsterFuturesMarketService implements IFuturesMarketService {
         ...response,
         timestamp: Date.now(),
         exchange: 'aster',
-        tradingType: 'futures',
+        tradingType: 'perpetual',
       };
     } catch (error) {
       this.logger.error('Error getting long/short ratio:', error);
@@ -590,7 +590,7 @@ export class AsterFuturesMarketService implements IFuturesMarketService {
         ...response,
         timestamp: Date.now(),
         exchange: 'aster',
-        tradingType: 'futures',
+        tradingType: 'perpetual',
       };
     } catch (error) {
       this.logger.error('Error getting premium index:', error);
@@ -623,7 +623,7 @@ export class AsterFuturesMarketService implements IFuturesMarketService {
         ...response,
         timestamp: Date.now(),
         exchange: 'aster',
-        tradingType: 'futures',
+        tradingType: 'perpetual',
       };
     } catch (error) {
       this.logger.error('Error getting liquidation orders:', error);
@@ -653,7 +653,7 @@ export class AsterFuturesMarketService implements IFuturesMarketService {
               data: contracts[0],
               timestamp: Date.now(),
               exchange: 'aster',
-              tradingType: 'futures',
+              tradingType: 'perpetual',
             };
           }
         }
@@ -663,7 +663,7 @@ export class AsterFuturesMarketService implements IFuturesMarketService {
           data: contracts,
           timestamp: Date.now(),
           exchange: 'aster',
-          tradingType: 'futures',
+          tradingType: 'perpetual',
         };
       }
 
@@ -693,7 +693,7 @@ export class AsterFuturesMarketService implements IFuturesMarketService {
           data: symbols,
           timestamp: Date.now(),
           exchange: 'aster',
-          tradingType: 'futures',
+          tradingType: 'perpetual',
         };
       }
 
@@ -729,7 +729,7 @@ export class AsterFuturesMarketService implements IFuturesMarketService {
         data: { min: '0.001', max: '1000000' },
         timestamp: Date.now(),
         exchange: 'aster',
-        tradingType: 'futures',
+        tradingType: 'perpetual',
       };
     } catch (error) {
       return {
@@ -761,7 +761,7 @@ export class AsterFuturesMarketService implements IFuturesMarketService {
         data: { min: '10', max: '10000000' },
         timestamp: Date.now(),
         exchange: 'aster',
-        tradingType: 'futures',
+        tradingType: 'perpetual',
       };
     } catch (error) {
       return {

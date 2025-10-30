@@ -3,7 +3,14 @@
  * All exchange trading services must implement this interface
  */
 
-import { ApiResponse, Order, OrderSide, OrderType, TimeInForce } from '../types/exchange.types';
+import {
+  ApiResponse,
+  Order,
+  OrderSide,
+  OrderType,
+  TimeInForce,
+  PositionSide,
+} from '../types/exchange.types';
 
 export interface PlaceOrderParams {
   symbol: string;
@@ -15,6 +22,7 @@ export interface PlaceOrderParams {
   clientOrderId?: string;
   stopPrice?: string;
   reduceOnly?: boolean;
+  positionSide?: PositionSide;
 }
 
 export interface MarketOrderParams {

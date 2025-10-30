@@ -14,20 +14,8 @@ export interface SetLeverageParams {
   leverage: number;
 }
 
-export interface SetMarginTypeParams {
-  symbol: string;
-  marginType: 'ISOLATED' | 'CROSSED';
-}
-
 export interface SetPositionModeParams {
   dualSidePosition: boolean; // true = hedge mode, false = one-way mode
-}
-
-export interface ModifyPositionMarginParams {
-  symbol: string;
-  amount: string;
-  type: 1 | 2; // 1: add margin, 2: reduce margin
-  positionSide?: PositionSide;
 }
 
 /**
@@ -84,16 +72,6 @@ export interface IFuturesTradingService extends IBaseTradingService {
   getLeverage(symbol: string): Promise<ApiResponse<number>>;
 
   /**
-   * Set margin type (ISOLATED or CROSSED)
-   */
-  setMarginType(params: SetMarginTypeParams): Promise<ApiResponse<any>>;
-
-  /**
-   * Get current margin type
-   */
-  getMarginType(symbol: string): Promise<ApiResponse<'ISOLATED' | 'CROSSED'>>;
-
-  /**
    * Set position mode (one-way or hedge mode)
    */
   setPositionMode(params: SetPositionModeParams): Promise<ApiResponse<any>>;
@@ -103,10 +81,7 @@ export interface IFuturesTradingService extends IBaseTradingService {
    */
   getPositionMode(): Promise<ApiResponse<{ dualSidePosition: boolean }>>;
 
-  /**
-   * Modify position margin (add or reduce)
-   */
-  modifyPositionMargin(params: ModifyPositionMarginParams): Promise<ApiResponse<any>>;
+  // Margin-related methods removed (margin is not supported)
 
   /**
    * Risk Management
@@ -146,6 +121,30 @@ export interface IFuturesTradingService extends IBaseTradingService {
    * Get position risk (margin ratio, liquidation price, etc.)
    */
   getPositionRisk(symbol?: string): Promise<ApiResponse<any>>;
+
+  /**
+   * Quick open position by USD value and risk params
+   * symbol - trading symbol (e.g., BTCUSDT)
+   * usdValue - amount in USDT to allocate to the position
+   * stopLossPercent - stop loss percentage (required)
+   * takeProfitPercent - take profit percentage (required)
+   * leverage - leverage to set before opening (required)
+   */
+  quickLong(
+    symbol: string,
+    usdValue: number,
+    stopLossPercent: number,
+    takeProfitPercent: number,
+    leverage: number,
+  ): Promise<ApiResponse<any>>;
+
+  quickShort(
+    symbol: string,
+    usdValue: number,
+    stopLossPercent: number,
+    takeProfitPercent: number,
+    leverage: number,
+  ): Promise<ApiResponse<any>>;
 
   /**
    * Quick position methods

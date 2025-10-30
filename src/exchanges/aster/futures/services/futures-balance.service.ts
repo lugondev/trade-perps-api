@@ -49,7 +49,7 @@ export class AsterFuturesBalanceService implements IFuturesBalanceService {
             data: balance,
             timestamp: Date.now(),
             exchange: 'aster',
-            tradingType: 'futures',
+            tradingType: 'perpetual',
           };
         }
 
@@ -58,7 +58,7 @@ export class AsterFuturesBalanceService implements IFuturesBalanceService {
           data: balances,
           timestamp: Date.now(),
           exchange: 'aster',
-          tradingType: 'futures',
+          tradingType: 'perpetual',
         };
       }
 
@@ -116,7 +116,7 @@ export class AsterFuturesBalanceService implements IFuturesBalanceService {
           },
           timestamp: Date.now(),
           exchange: 'aster',
-          tradingType: 'futures',
+          tradingType: 'perpetual',
         };
       }
       return accountInfo;
@@ -176,7 +176,7 @@ export class AsterFuturesBalanceService implements IFuturesBalanceService {
             data: position,
             timestamp: Date.now(),
             exchange: 'aster',
-            tradingType: 'futures',
+            tradingType: 'perpetual',
           };
         }
 
@@ -185,7 +185,7 @@ export class AsterFuturesBalanceService implements IFuturesBalanceService {
           data: positions,
           timestamp: Date.now(),
           exchange: 'aster',
-          tradingType: 'futures',
+          tradingType: 'perpetual',
         };
       }
 

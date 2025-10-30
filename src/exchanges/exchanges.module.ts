@@ -24,7 +24,7 @@ export class ExchangesModule implements OnModuleInit {
     // Register Aster Futures
     this.registry.register({
       exchange: 'aster',
-      tradingType: 'futures',
+      tradingType: 'perpetual',
       tradingService: AsterFuturesTradingService,
       balanceService: AsterFuturesBalanceService,
       marketService: AsterFuturesMarketService,
@@ -40,6 +40,6 @@ export class ExchangesModule implements OnModuleInit {
     });
 
     const logger = new Logger(ExchangesModule.name);
-    logger.log('✅ Registered exchanges: aster-futures, hyperliquid-perpetual');
+    logger.log('✅ Registered exchanges: aster-perpetual, hyperliquid-perpetual');
   }
 }

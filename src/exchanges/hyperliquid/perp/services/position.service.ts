@@ -1,12 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { formatSymbol } from './perp-market.utils';
 import { mapPosition } from './perp-helpers';
-import {
-  SetLeverageParams,
-  SetMarginTypeParams,
-  SetPositionModeParams,
-  ModifyPositionMarginParams,
-} from '../../../../common/interfaces';
+import { SetLeverageParams, SetPositionModeParams } from '../../../../common/interfaces';
 import { ApiResponse, Position, PositionSide } from '../../../../common/types';
 import { HyperliquidApiService } from '../../shared/hyperliquid-api.service';
 
@@ -82,10 +77,8 @@ export class PositionService {
     try {
       const coin = formatSymbol(params.symbol);
 
-      // Get current margin type
-      const marginTypeResponse = await this.getMarginType(params.symbol);
-      const isCross = marginTypeResponse.data === 'CROSSED';
-
+      // Margin removed — assume non-crossed (isolated-like) behavior when setting leverage
+      const isCross = false;
       const result = await this.apiService.updateLeverage(coin, isCross, params.leverage);
 
       if (!result.success) {
@@ -174,102 +167,7 @@ export class PositionService {
     }
   }
 
-  /**
-   * Set margin type (ISOLATED or CROSSED)
-   */
-  async setMarginType(params: SetMarginTypeParams): Promise<ApiResponse<any>> {
-    try {
-      const coin = formatSymbol(params.symbol);
-
-      // Get current leverage
-      const leverageResponse = await this.getLeverage(params.symbol);
-      const currentLeverage = leverageResponse.data || 1;
-
-      const isCross = params.marginType === 'CROSSED';
-
-      const result = await this.apiService.updateLeverage(coin, isCross, currentLeverage);
-
-      if (!result.success) {
-        return {
-          success: false,
-          error: result.error || 'Failed to set margin type',
-          timestamp: Date.now(),
-          exchange: 'hyperliquid',
-          tradingType: 'perpetual',
-        };
-      }
-
-      return {
-        success: true,
-        data: {
-          symbol: params.symbol,
-          marginType: params.marginType,
-        },
-        timestamp: Date.now(),
-        exchange: 'hyperliquid',
-        tradingType: 'perpetual',
-      };
-    } catch (error: any) {
-      this.logger.error(`Error setting margin type: ${error.message}`);
-      return {
-        success: false,
-        error: error.message,
-        timestamp: Date.now(),
-        exchange: 'hyperliquid',
-        tradingType: 'perpetual',
-      };
-    }
-  }
-
-  /**
-   * Get current margin type
-   */
-  async getMarginType(symbol: string): Promise<ApiResponse<'ISOLATED' | 'CROSSED'>> {
-    try {
-      const positionResponse = await this.getPositions(symbol);
-
-      if (positionResponse.success && positionResponse.data) {
-        const position = Array.isArray(positionResponse.data)
-          ? positionResponse.data[0]
-          : positionResponse.data;
-
-        if (!position) {
-          return {
-            success: true,
-            data: 'CROSSED',
-            timestamp: Date.now(),
-            exchange: 'hyperliquid',
-            tradingType: 'perpetual',
-          };
-        }
-
-        return {
-          success: true,
-          data: position.marginType === 'isolated' ? 'ISOLATED' : 'CROSSED',
-          timestamp: Date.now(),
-          exchange: 'hyperliquid',
-          tradingType: 'perpetual',
-        };
-      }
-
-      return {
-        success: false,
-        error: 'Failed to get margin type',
-        timestamp: Date.now(),
-        exchange: 'hyperliquid',
-        tradingType: 'perpetual',
-      };
-    } catch (error: any) {
-      this.logger.error(`Error getting margin type: ${error.message}`);
-      return {
-        success: false,
-        error: error.message,
-        timestamp: Date.now(),
-        exchange: 'hyperliquid',
-        tradingType: 'perpetual',
-      };
-    }
-  }
+  // Margin-related methods removed (margin is not supported)
 
   /**
    * Set position mode (one-way or hedge mode)
@@ -307,78 +205,7 @@ export class PositionService {
     };
   }
 
-  /**
-   * Modify position margin (add or reduce)
-   */
-  async modifyPositionMargin(params: ModifyPositionMarginParams): Promise<ApiResponse<any>> {
-    try {
-      const coin = formatSymbol(params.symbol);
-
-      // Get current position to determine side
-      const positionsResponse = await this.getPositions(params.symbol);
-
-      if (!positionsResponse.success || !positionsResponse.data) {
-        return {
-          success: false,
-          error: 'No position found for this symbol',
-          timestamp: Date.now(),
-          exchange: 'hyperliquid',
-          tradingType: 'perpetual',
-        };
-      }
-
-      const position = Array.isArray(positionsResponse.data)
-        ? positionsResponse.data[0]
-        : positionsResponse.data;
-
-      if (!position) {
-        return {
-          success: false,
-          error: 'No position found for this symbol',
-          timestamp: Date.now(),
-          exchange: 'hyperliquid',
-          tradingType: 'perpetual',
-        };
-      }
-
-      const isBuy = position.side === PositionSide.LONG;
-      const amount = parseFloat(params.amount);
-      const ntli = params.type === 1 ? amount : -amount;
-
-      const result = await this.apiService.updateIsolatedMargin(coin, isBuy, ntli);
-
-      if (!result.success) {
-        return {
-          success: false,
-          error: result.error || 'Failed to modify position margin',
-          timestamp: Date.now(),
-          exchange: 'hyperliquid',
-          tradingType: 'perpetual',
-        };
-      }
-
-      return {
-        success: true,
-        data: {
-          symbol: params.symbol,
-          amount: params.amount,
-          type: params.type,
-        },
-        timestamp: Date.now(),
-        exchange: 'hyperliquid',
-        tradingType: 'perpetual',
-      };
-    } catch (error: any) {
-      this.logger.error(`Error modifying position margin: ${error.message}`);
-      return {
-        success: false,
-        error: error.message,
-        timestamp: Date.now(),
-        exchange: 'hyperliquid',
-        tradingType: 'perpetual',
-      };
-    }
-  }
+  // Margin-related methods removed (margin is not supported)
 
   // formatting helpers moved to perp-market.utils
 }

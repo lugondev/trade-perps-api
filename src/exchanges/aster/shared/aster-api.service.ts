@@ -80,8 +80,13 @@ export class AsterApiService {
         throw new Error('HMAC API credentials (apiKey/apiSecret) are required');
       }
 
+      // Ensure timestamp and recvWindow are present for HMAC-signed requests
+      const allParams: Record<string, any> = { ...(params || {}) };
+      if (!allParams.timestamp) allParams.timestamp = Date.now();
+      if (!allParams.recvWindow) allParams.recvWindow = 50000;
+
       // Build URL-encoded query string preserving insertion order
-      const qs = new URLSearchParams(params as any).toString();
+      const qs = new URLSearchParams(allParams as any).toString();
 
       // Compute HMAC SHA256 signature
       const signature = crypto
@@ -93,6 +98,10 @@ export class AsterApiService {
 
       const url = this.baseURL + endpoint;
 
+      this.logger.debug('HMAC POST URL:', url);
+      this.logger.debug('HMAC POST body (qs):', qs);
+      this.logger.debug('HMAC Signature:', signature);
+
       const response = await axios.post(url, body, {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -102,8 +111,24 @@ export class AsterApiService {
         timeout: 30000,
       });
 
+      this.logger.debug(`API Response: ${response.status} ${endpoint}`);
+      this.logger.debug('API Response body:', response.data);
+
       return this.formatResponse(response.data);
     } catch (error) {
+      // Log detailed error info for debugging HMAC requests
+      const errDetails = {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        url: error.config?.url,
+        method: error.config?.method,
+        requestBody: params,
+        responseData: error.response?.data,
+        message: error.message,
+      };
+      this.logger.error('HMAC POST Error details:');
+      this.logger.debug(JSON.stringify(errDetails, null, 2));
+
       return this.handleError(error);
     }
   }
@@ -338,11 +363,14 @@ export class AsterApiService {
       '/fapi/v1/userTrades',
       '/fapi/v1/income',
       '/fapi/v1/positionRisk',
+      '/fapi/v1/leverage',
+      '/fapi/v1/batchOrders',
     ];
 
-    // For now, use Ethereum signature for ALL endpoints until we confirm HMAC works
-    // If you want to test HMAC for specific endpoints, uncomment them above
-    const useEthereumForAll = true;
+    // Choose signature type: prefer HMAC for /fapi/v1/* endpoints (private/user API keys),
+    // and use Ethereum wallet signature for /fapi/v3/* endpoints when required.
+    // Default behavior: use HMAC for v1 endpoints.
+    const useEthereumForAll = false;
 
     if (useEthereumForAll) {
       return false;
@@ -371,12 +399,24 @@ export class AsterApiService {
       const businessParams =
         config.method?.toLowerCase() === 'post' ? config.data || {} : config.params || {};
 
-      // Merge with timestamp and recvWindow - CONVERT ALL TO STRINGS for signature
-      const allParams = {
+      // Merge with timestamp and recvWindow then CONVERT ALL VALUES TO STRINGS for signature
+      const mergedParams = {
         ...businessParams,
-        timestamp: String(timestamp), // Convert to string for signature
-        recvWindow: String(recvWindow), // Convert to string for signature
+        timestamp: timestamp, // keep numeric for originalParams
+        recvWindow: recvWindow, // keep numeric for originalParams
       };
+
+      // Convert every parameter value to string (Aster expects stringified values for signature)
+      const allParams: Record<string, string> = {};
+      Object.keys(mergedParams).forEach(key => {
+        const val = (mergedParams as any)[key];
+        // Ensure undefined/null become empty string
+        allParams[key] = val === null || val === undefined ? '' : String(val);
+      });
+
+      // Ensure timestamp and recvWindow are stringified as well
+      allParams.timestamp = String(timestamp);
+      allParams.recvWindow = String(recvWindow);
 
       this.logger.debug('All parameters for signature (strings):', allParams);
       this.logger.debug('Original numeric values:', { timestamp, recvWindow });

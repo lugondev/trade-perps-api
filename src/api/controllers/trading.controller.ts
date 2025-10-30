@@ -1,5 +1,5 @@
 import { Controller, Post, Get, Delete, Body, Query, Param, Logger } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiBody } from '@nestjs/swagger';
 import { ApiKeyAuth } from '../../common/decorators/api-key.decorator';
 import { ExchangeServiceFactory } from '../../common/factory/exchange.factory';
 import { ExchangeName, TradingType } from '../../common/types/exchange.types';
@@ -10,13 +10,13 @@ import {
   LimitOrderDto,
   CancelOrderDto,
   SetLeverageDto,
-  SetMarginTypeDto,
   SetPositionModeDto,
-  ModifyPositionMarginDto,
+  // margin DTOs removed
   SetStopLossDto,
   SetTakeProfitDto,
   OpenPositionDto,
   ClosePositionDto,
+  QuickLongShortDto,
 } from '../../common/dto/trading.dto';
 
 @ApiTags('🔄 Trading API')
@@ -33,7 +33,7 @@ export class TradingController {
   private getExchangeParams(exchange?: string, tradingType?: string) {
     return {
       exchange: (exchange || 'aster') as ExchangeName,
-      tradingType: (tradingType || 'futures') as TradingType,
+      tradingType: (tradingType || 'perpetual') as TradingType,
     };
   }
 
@@ -334,61 +334,7 @@ export class TradingController {
     return service.getLeverage(symbol);
   }
 
-  /**
-   * Set margin type
-   */
-  @Post('margin-type')
-  @ApiOperation({ summary: 'Set margin type (ISOLATED or CROSSED)' })
-  @ApiQuery({
-    name: 'exchange',
-    required: false,
-    enum: ['aster', 'hyperliquid'],
-    example: 'hyperliquid',
-  })
-  @ApiQuery({
-    name: 'tradingType',
-    required: false,
-    enum: ['futures', 'perpetual'],
-    example: 'perpetual',
-  })
-  @ApiResponse({ status: 200, description: 'Margin type set successfully' })
-  async setMarginType(
-    @Query('exchange') exchange?: string,
-    @Query('tradingType') tradingType?: string,
-    @Body() dto?: SetMarginTypeDto,
-  ) {
-    const { exchange: ex, tradingType: tt } = this.getExchangeParams(exchange, tradingType);
-    const service = await this.getFuturesTradingService(ex, tt);
-    return service.setMarginType(dto!);
-  }
-
-  /**
-   * Get margin type
-   */
-  @Get('margin-type/:symbol')
-  @ApiOperation({ summary: 'Get current margin type for a symbol' })
-  @ApiQuery({
-    name: 'exchange',
-    required: false,
-    enum: ['aster', 'hyperliquid'],
-    example: 'hyperliquid',
-  })
-  @ApiQuery({
-    name: 'tradingType',
-    required: false,
-    enum: ['futures', 'perpetual'],
-    example: 'perpetual',
-  })
-  @ApiResponse({ status: 200, description: 'Margin type retrieved successfully' })
-  async getMarginType(
-    @Param('symbol') symbol: string,
-    @Query('exchange') exchange?: string,
-    @Query('tradingType') tradingType?: string,
-  ) {
-    const { exchange: ex, tradingType: tt } = this.getExchangeParams(exchange, tradingType);
-    const service = await this.getFuturesTradingService(ex, tt);
-    return service.getMarginType(symbol);
-  }
+  // Margin endpoints removed (margin is not supported)
 
   /**
    * Set position mode
@@ -445,33 +391,7 @@ export class TradingController {
     return service.getPositionMode();
   }
 
-  /**
-   * Modify position margin
-   */
-  @Post('position/margin')
-  @ApiOperation({ summary: 'Add or reduce position margin (isolated positions only)' })
-  @ApiQuery({
-    name: 'exchange',
-    required: false,
-    enum: ['aster', 'hyperliquid'],
-    example: 'hyperliquid',
-  })
-  @ApiQuery({
-    name: 'tradingType',
-    required: false,
-    enum: ['futures', 'perpetual'],
-    example: 'perpetual',
-  })
-  @ApiResponse({ status: 200, description: 'Position margin modified successfully' })
-  async modifyPositionMargin(
-    @Query('exchange') exchange?: string,
-    @Query('tradingType') tradingType?: string,
-    @Body() dto?: ModifyPositionMarginDto,
-  ) {
-    const { exchange: ex, tradingType: tt } = this.getExchangeParams(exchange, tradingType);
-    const service = await this.getFuturesTradingService(ex, tt);
-    return service.modifyPositionMargin(dto!);
-  }
+  // Modify position margin endpoint removed (margin is not supported)
 
   /**
    * Set stop loss
@@ -817,10 +737,10 @@ export class TradingController {
   }
 
   /**
-   * Quick market buy
+   * Quick long (open long position by USD value with TP/SL and leverage)
    */
-  @Post('quick/buy')
-  @ApiOperation({ summary: 'Quick market buy' })
+  @Post('quick/long')
+  @ApiOperation({ summary: 'Quick long (USD value; requires TP/SL/leverage)' })
   @ApiQuery({
     name: 'exchange',
     required: false,
@@ -834,21 +754,28 @@ export class TradingController {
     example: 'perpetual',
   })
   @ApiResponse({ status: 201, description: 'Market buy executed successfully' })
-  async marketBuy(
+  async quickLong(
     @Query('exchange') exchange?: string,
     @Query('tradingType') tradingType?: string,
-    @Body() dto?: OpenPositionDto,
+    @Body() dto?: QuickLongShortDto,
   ) {
     const { exchange: ex, tradingType: tt } = this.getExchangeParams(exchange, tradingType);
     const service = await this.getFuturesTradingService(ex, tt);
-    return service.marketBuy(dto!.symbol, dto!.quantity);
+    // dto fields are required: usdValue, stopLossPercent, takeProfitPercent, leverage
+    return service.quickLong(
+      dto!.symbol,
+      dto!.usdValue,
+      dto!.stopLossPercent,
+      dto!.takeProfitPercent,
+      dto!.leverage,
+    );
   }
 
   /**
-   * Quick market sell
+   * Quick short (open short position by USD value with TP/SL and leverage)
    */
-  @Post('quick/sell')
-  @ApiOperation({ summary: 'Quick market sell' })
+  @Post('quick/short')
+  @ApiOperation({ summary: 'Quick short (USD value; requires TP/SL/leverage)' })
   @ApiQuery({
     name: 'exchange',
     required: false,
@@ -862,13 +789,67 @@ export class TradingController {
     example: 'perpetual',
   })
   @ApiResponse({ status: 201, description: 'Market sell executed successfully' })
-  async marketSell(
+  async quickShort(
     @Query('exchange') exchange?: string,
     @Query('tradingType') tradingType?: string,
-    @Body() dto?: OpenPositionDto,
+    @Body() dto?: QuickLongShortDto,
   ) {
     const { exchange: ex, tradingType: tt } = this.getExchangeParams(exchange, tradingType);
     const service = await this.getFuturesTradingService(ex, tt);
-    return service.marketSell(dto!.symbol, dto!.quantity);
+    return service.quickShort(
+      dto!.symbol,
+      dto!.usdValue,
+      dto!.stopLossPercent,
+      dto!.takeProfitPercent,
+      dto!.leverage,
+    );
+  }
+
+  /**
+   * Close position by symbol only (simplified)
+   */
+  @Post('position/close-by-symbol')
+  @ApiOperation({ summary: 'Close position by symbol only (simple)' })
+  @ApiQuery({
+    name: 'exchange',
+    required: false,
+    enum: ['aster', 'hyperliquid'],
+    example: 'hyperliquid',
+  })
+  @ApiQuery({
+    name: 'tradingType',
+    required: false,
+    enum: ['futures', 'perpetual'],
+    example: 'perpetual',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        symbol: {
+          type: 'string',
+          example: 'BTCUSDT',
+          description: 'Symbol of the position to close',
+        },
+      },
+      required: ['symbol'],
+    },
+  })
+  @ApiResponse({ status: 200, description: 'Position closed successfully' })
+  async closePositionBySymbol(
+    @Query('exchange') exchange?: string,
+    @Query('tradingType') tradingType?: string,
+    @Body('symbol') symbol?: string,
+  ) {
+    const { exchange: ex, tradingType: tt } = this.getExchangeParams(exchange, tradingType);
+    const service = await this.getFuturesTradingService(ex, tt);
+    if (!symbol) {
+      return {
+        success: false,
+        error: 'Symbol is required',
+        timestamp: Date.now(),
+      };
+    }
+    return service.closePosition(symbol);
   }
 }
