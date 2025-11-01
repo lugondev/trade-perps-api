@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { IFuturesBalanceService } from '../../../../common/interfaces';
+import { IPerpetualBalanceService } from '../../../../common/interfaces';
 import {
   ApiResponse,
   Balance,
@@ -9,8 +9,8 @@ import {
 import { AsterApiService } from '../../shared/aster-api.service';
 
 @Injectable()
-export class AsterFuturesBalanceService implements IFuturesBalanceService {
-  private readonly logger = new Logger(AsterFuturesBalanceService.name);
+export class AsterPerpetualBalanceService implements IPerpetualBalanceService {
+  private readonly logger = new Logger(AsterPerpetualBalanceService.name);
 
   constructor(private readonly asterApiService: AsterApiService) {}
 

@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import {
-  IFuturesTradingService,
+  IPerpetualTradingService,
   PlaceOrderParams,
   MarketOrderParams,
   LimitOrderParams,
@@ -20,17 +20,17 @@ import {
   PositionSide,
 } from '../../../../common/types';
 import { AsterApiService } from '../../shared/aster-api.service';
-import { AsterFuturesBalanceService } from './futures-balance.service';
-import { AsterFuturesMarketService } from './futures-market.service';
+import { AsterPerpetualBalanceService } from './perpetual-balance.service';
+import { AsterPerpetualMarketService } from './perpetual-market.service';
 
 @Injectable()
-export class AsterFuturesTradingService implements IFuturesTradingService {
-  private readonly logger = new Logger(AsterFuturesTradingService.name);
+export class AsterPerpetualTradingService implements IPerpetualTradingService {
+  private readonly logger = new Logger(AsterPerpetualTradingService.name);
 
   constructor(
     private readonly asterApiService: AsterApiService,
-    private readonly balanceService: AsterFuturesBalanceService,
-    private readonly marketService: AsterFuturesMarketService,
+    private readonly balanceService: AsterPerpetualBalanceService,
+    private readonly marketService: AsterPerpetualMarketService,
   ) {}
 
   /**

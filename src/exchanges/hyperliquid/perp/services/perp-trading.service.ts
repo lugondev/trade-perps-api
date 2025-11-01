@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import {
-  IFuturesTradingService,
+  IPerpetualTradingService,
   PlaceOrderParams,
   MarketOrderParams,
   LimitOrderParams,
@@ -20,7 +20,7 @@ import { HyperliquidApiService } from '../../shared/hyperliquid-api.service';
 import { formatSymbol } from './perp-market.utils';
 
 @Injectable()
-export class HyperliquidPerpTradingService implements IFuturesTradingService {
+export class HyperliquidPerpTradingService implements IPerpetualTradingService {
   private readonly logger = new Logger(HyperliquidPerpTradingService.name);
 
   constructor(

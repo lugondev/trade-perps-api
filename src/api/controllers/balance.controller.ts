@@ -3,7 +3,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { ApiKeyAuth } from '../../common/decorators/api-key.decorator';
 import { ExchangeServiceFactory } from '../../common/factory/exchange.factory';
 import { ExchangeName, TradingType } from '../../common/types/exchange.types';
-import { IFuturesBalanceService } from '../../common/interfaces';
+import { IPerpetualBalanceService } from '../../common/interfaces';
 
 @ApiTags('� Balance API')
 @ApiKeyAuth()
@@ -29,11 +29,11 @@ export class BalanceController {
   private async getFuturesBalanceService(
     exchange: ExchangeName,
     tradingType: TradingType,
-  ): Promise<IFuturesBalanceService> {
+  ): Promise<IPerpetualBalanceService> {
     return this.exchangeFactory.getBalanceService(
       exchange,
       tradingType,
-    ) as Promise<IFuturesBalanceService>;
+    ) as Promise<IPerpetualBalanceService>;
   }
 
   /**
@@ -50,7 +50,7 @@ export class BalanceController {
   @ApiQuery({
     name: 'tradingType',
     required: false,
-    enum: ['futures', 'perpetual'],
+    enum: ['perpetual'],
     example: 'perpetual',
   })
   @ApiResponse({ status: 200, description: 'Balance retrieved successfully' })
@@ -77,7 +77,7 @@ export class BalanceController {
   @ApiQuery({
     name: 'tradingType',
     required: false,
-    enum: ['futures', 'perpetual'],
+    enum: ['perpetual'],
     example: 'perpetual',
   })
   @ApiQuery({ name: 'symbol', required: false, example: 'BTCUSDT' })
@@ -106,7 +106,7 @@ export class BalanceController {
   @ApiQuery({
     name: 'tradingType',
     required: false,
-    enum: ['futures', 'perpetual'],
+    enum: ['perpetual'],
     example: 'perpetual',
   })
   @ApiResponse({ status: 200, description: 'Portfolio value retrieved successfully' })
@@ -133,7 +133,7 @@ export class BalanceController {
   @ApiQuery({
     name: 'tradingType',
     required: false,
-    enum: ['futures', 'perpetual'],
+    enum: ['perpetual'],
     example: 'perpetual',
   })
   @ApiResponse({ status: 200, description: 'Unrealized PnL retrieved successfully' })
@@ -160,7 +160,7 @@ export class BalanceController {
   @ApiQuery({
     name: 'tradingType',
     required: false,
-    enum: ['futures', 'perpetual'],
+    enum: ['perpetual'],
     example: 'perpetual',
   })
   @ApiQuery({ name: 'symbol', required: false, example: 'BTCUSDT' })
@@ -197,7 +197,7 @@ export class BalanceController {
   @ApiQuery({
     name: 'tradingType',
     required: false,
-    enum: ['futures', 'perpetual'],
+    enum: ['perpetual'],
     example: 'perpetual',
   })
   @ApiQuery({ name: 'symbol', required: false, example: 'BTCUSDT' })
@@ -232,7 +232,7 @@ export class BalanceController {
   @ApiQuery({
     name: 'tradingType',
     required: false,
-    enum: ['futures', 'perpetual'],
+    enum: ['perpetual'],
     example: 'perpetual',
   })
   @ApiResponse({ status: 200, description: 'Liquidation risk retrieved successfully' })
@@ -259,7 +259,7 @@ export class BalanceController {
   @ApiQuery({
     name: 'tradingType',
     required: false,
-    enum: ['futures', 'perpetual'],
+    enum: ['perpetual'],
     example: 'perpetual',
   })
   @ApiQuery({ name: 'quantity', required: true, type: String })
@@ -291,7 +291,7 @@ export class BalanceController {
   @ApiQuery({
     name: 'tradingType',
     required: false,
-    enum: ['futures', 'perpetual'],
+    enum: ['perpetual'],
     example: 'perpetual',
   })
   @ApiQuery({ name: 'entryPrice', required: true, type: String })
@@ -327,7 +327,7 @@ export class BalanceController {
   @ApiQuery({
     name: 'tradingType',
     required: false,
-    enum: ['futures', 'perpetual'],
+    enum: ['perpetual'],
     example: 'perpetual',
   })
   @ApiResponse({ status: 200, description: 'Available balance retrieved successfully' })

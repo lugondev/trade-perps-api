@@ -1,13 +1,13 @@
 /**
- * Futures/Perpetuals Market Data Service Interface
- * Extends base market interface with futures-specific features
+ * Perpetual Market Data Service Interface
+ * Extends base market interface with perpetual-specific features
  */
 
 import { ApiResponse } from '../types/exchange.types';
 import { IBaseMarketService } from './market.interface';
 
 /**
- * Futures market-specific data types
+ * Perpetual market-specific data types
  */
 export interface FundingRate {
   symbol: string;
@@ -54,10 +54,10 @@ export interface LiquidationOrder {
 }
 
 /**
- * Futures Market Data Service Interface
- * All futures/perps exchanges must implement this interface
+ * Perpetual Market Data Service Interface
+ * All perpetual/perps exchanges must implement this interface
  */
-export interface IFuturesMarketService extends IBaseMarketService {
+export interface IPerpetualMarketService extends IBaseMarketService {
   /**
    * Get current funding rate
    */

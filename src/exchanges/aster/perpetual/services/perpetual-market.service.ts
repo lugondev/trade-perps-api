@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { IFuturesMarketService, FundingRate } from '../../../../common/interfaces';
+import { IPerpetualMarketService, FundingRate } from '../../../../common/interfaces';
 import {
   ApiResponse,
   OrderBook,
@@ -18,8 +18,8 @@ interface SymbolInfo {
 }
 
 @Injectable()
-export class AsterFuturesMarketService implements IFuturesMarketService {
-  private readonly logger = new Logger(AsterFuturesMarketService.name);
+export class AsterPerpetualMarketService implements IPerpetualMarketService {
+  private readonly logger = new Logger(AsterPerpetualMarketService.name);
   private symbolInfoCache: Map<string, SymbolInfo> = new Map();
   private cacheExpiry: number = 0;
   private readonly CACHE_DURATION = 3600000; // 1 hour

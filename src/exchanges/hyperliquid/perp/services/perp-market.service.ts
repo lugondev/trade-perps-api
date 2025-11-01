@@ -1,12 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { IFuturesMarketService } from '../../../../common/interfaces';
+import { IPerpetualMarketService } from '../../../../common/interfaces';
 import { ApiResponse } from '../../../../common/types/exchange.types';
 import { HyperliquidApiService } from '../../shared/hyperliquid-api.service';
 import { formatSymbol, formatSymbolResponse } from './perp-market.utils';
 import { mapTrade } from './perp-helpers';
 
 @Injectable()
-export class HyperliquidPerpMarketService implements IFuturesMarketService {
+export class HyperliquidPerpMarketService implements IPerpetualMarketService {
   private readonly logger = new Logger(HyperliquidPerpMarketService.name);
 
   constructor(private readonly apiService: HyperliquidApiService) {}

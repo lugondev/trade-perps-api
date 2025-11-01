@@ -1,15 +1,15 @@
 /**
- * Futures/Perpetuals Balance Service Interface
- * Extends base balance interface with futures-specific features
+ * Perpetual Balance Service Interface
+ * Extends base balance interface with perpetual-specific features
  */
 
 import { ApiResponse, Balance, Position } from '../types/exchange.types';
 import { IBaseBalanceService } from './balance.interface';
 
 /**
- * Futures account information
+ * Perpetual account information
  */
-export interface FuturesAccountInfo {
+export interface PerpetualAccountInfo {
   totalWalletBalance: string;
   totalUnrealizedProfit: string;
   totalMarginBalance: string;
@@ -63,7 +63,7 @@ export interface IncomeHistory {
 }
 
 /**
- * Transaction history for futures account
+ * Transaction history for perpetual account
  */
 export interface TransactionHistory {
   symbol?: string;
@@ -84,10 +84,10 @@ export interface TransactionHistory {
 }
 
 /**
- * Futures Balance Service Interface
- * All futures/perps exchanges must implement this interface
+ * Perpetual Balance Service Interface
+ * All perpetual/perps exchanges must implement this interface
  */
-export interface IFuturesBalanceService extends IBaseBalanceService {
+export interface IPerpetualBalanceService extends IBaseBalanceService {
   /**
    * Position Management
    */
@@ -112,10 +112,10 @@ export interface IFuturesBalanceService extends IBaseBalanceService {
    */
 
   /**
-   * Get complete futures account information
+   * Get complete perpetual account information
    * Includes balances, positions, margin info, etc.
    */
-  getAccountInfo(): Promise<ApiResponse<FuturesAccountInfo>>;
+  getAccountInfo(): Promise<ApiResponse<PerpetualAccountInfo>>;
 
   /**
    * Get available balance for trading

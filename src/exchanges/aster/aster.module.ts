@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
-import { AsterFuturesModule } from './futures/futures.module';
+import { AsterPerpetualModule } from './perpetual/perpetual.module';
 
 @Module({
-  imports: [AsterFuturesModule],
-  exports: [AsterFuturesModule],
+  imports: [AsterPerpetualModule],
+  exports: [AsterPerpetualModule],
 })
 export class AsterModule {}

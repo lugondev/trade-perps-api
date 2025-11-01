@@ -3,7 +3,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiBody } from '@nestjs/s
 import { ApiKeyAuth } from '../../common/decorators/api-key.decorator';
 import { ExchangeServiceFactory } from '../../common/factory/exchange.factory';
 import { ExchangeName, TradingType } from '../../common/types/exchange.types';
-import { IFuturesTradingService } from '../../common/interfaces';
+import { IPerpetualTradingService } from '../../common/interfaces';
 import {
   PlaceOrderDto,
   MarketOrderDto,
@@ -38,16 +38,16 @@ export class TradingController {
   }
 
   /**
-   * Get futures trading service
+   * Get perpetual trading service
    */
-  private async getFuturesTradingService(
+  private async getPerpetualTradingService(
     exchange: ExchangeName,
     tradingType: TradingType,
-  ): Promise<IFuturesTradingService> {
+  ): Promise<IPerpetualTradingService> {
     return this.exchangeFactory.getTradingService(
       exchange,
       tradingType,
-    ) as Promise<IFuturesTradingService>;
+    ) as Promise<IPerpetualTradingService>;
   }
 
   /**
@@ -64,7 +64,7 @@ export class TradingController {
   @ApiQuery({
     name: 'tradingType',
     required: false,
-    enum: ['futures', 'perpetual'],
+    enum: ['perpetual'],
     example: 'perpetual',
   })
   @ApiResponse({ status: 201, description: 'Order placed successfully' })
@@ -74,7 +74,7 @@ export class TradingController {
     @Body() dto?: PlaceOrderDto,
   ) {
     const { exchange: ex, tradingType: tt } = this.getExchangeParams(exchange, tradingType);
-    const service = (await this.getFuturesTradingService(ex, tt)) as IFuturesTradingService;
+    const service = (await this.getPerpetualTradingService(ex, tt)) as IPerpetualTradingService;
     return service.placeOrder(dto!);
   }
 
@@ -92,7 +92,7 @@ export class TradingController {
   @ApiQuery({
     name: 'tradingType',
     required: false,
-    enum: ['futures', 'perpetual'],
+    enum: ['perpetual'],
     example: 'perpetual',
   })
   @ApiResponse({ status: 201, description: 'Market order placed successfully' })
@@ -102,7 +102,7 @@ export class TradingController {
     @Body() dto?: MarketOrderDto,
   ) {
     const { exchange: ex, tradingType: tt } = this.getExchangeParams(exchange, tradingType);
-    const service = await this.getFuturesTradingService(ex, tt);
+    const service = await this.getPerpetualTradingService(ex, tt);
     return service.placeMarketOrder(dto!);
   }
 
@@ -120,7 +120,7 @@ export class TradingController {
   @ApiQuery({
     name: 'tradingType',
     required: false,
-    enum: ['futures', 'perpetual'],
+    enum: ['perpetual'],
     example: 'perpetual',
   })
   @ApiResponse({ status: 201, description: 'Limit order placed successfully' })
@@ -130,7 +130,7 @@ export class TradingController {
     @Body() dto?: LimitOrderDto,
   ) {
     const { exchange: ex, tradingType: tt } = this.getExchangeParams(exchange, tradingType);
-    const service = await this.getFuturesTradingService(ex, tt);
+    const service = await this.getPerpetualTradingService(ex, tt);
     return service.placeLimitOrder(dto!);
   }
 
@@ -148,7 +148,7 @@ export class TradingController {
   @ApiQuery({
     name: 'tradingType',
     required: false,
-    enum: ['futures', 'perpetual'],
+    enum: ['perpetual'],
     example: 'perpetual',
   })
   @ApiResponse({ status: 200, description: 'Order cancelled successfully' })
@@ -158,7 +158,7 @@ export class TradingController {
     @Body() dto?: CancelOrderDto,
   ) {
     const { exchange: ex, tradingType: tt } = this.getExchangeParams(exchange, tradingType);
-    const service = await this.getFuturesTradingService(ex, tt);
+    const service = await this.getPerpetualTradingService(ex, tt);
     return service.cancelOrder(dto!);
   }
 
@@ -176,7 +176,7 @@ export class TradingController {
   @ApiQuery({
     name: 'tradingType',
     required: false,
-    enum: ['futures', 'perpetual'],
+    enum: ['perpetual'],
     example: 'perpetual',
   })
   @ApiQuery({ name: 'symbol', required: false, example: 'BTCUSDT' })
@@ -187,7 +187,7 @@ export class TradingController {
     @Query('symbol') symbol?: string,
   ) {
     const { exchange: ex, tradingType: tt } = this.getExchangeParams(exchange, tradingType);
-    const service = await this.getFuturesTradingService(ex, tt);
+    const service = await this.getPerpetualTradingService(ex, tt);
     return service.cancelAllOrders(symbol);
   }
 
@@ -205,7 +205,7 @@ export class TradingController {
   @ApiQuery({
     name: 'tradingType',
     required: false,
-    enum: ['futures', 'perpetual'],
+    enum: ['perpetual'],
     example: 'perpetual',
   })
   @ApiQuery({ name: 'symbol', required: false, example: 'BTCUSDT' })
@@ -216,7 +216,7 @@ export class TradingController {
     @Query('symbol') symbol?: string,
   ) {
     const { exchange: ex, tradingType: tt } = this.getExchangeParams(exchange, tradingType);
-    const service = await this.getFuturesTradingService(ex, tt);
+    const service = await this.getPerpetualTradingService(ex, tt);
     return service.getOpenOrders(symbol);
   }
 
@@ -234,7 +234,7 @@ export class TradingController {
   @ApiQuery({
     name: 'tradingType',
     required: false,
-    enum: ['futures', 'perpetual'],
+    enum: ['perpetual'],
     example: 'perpetual',
   })
   @ApiResponse({ status: 200, description: 'Order details retrieved successfully' })
@@ -245,7 +245,7 @@ export class TradingController {
     @Query('tradingType') tradingType?: string,
   ) {
     const { exchange: ex, tradingType: tt } = this.getExchangeParams(exchange, tradingType);
-    const service = await this.getFuturesTradingService(ex, tt);
+    const service = await this.getPerpetualTradingService(ex, tt);
     return service.getOrder(symbol, orderId);
   }
 
@@ -263,7 +263,7 @@ export class TradingController {
   @ApiQuery({
     name: 'tradingType',
     required: false,
-    enum: ['futures', 'perpetual'],
+    enum: ['perpetual'],
     example: 'perpetual',
   })
   @ApiQuery({ name: 'symbol', required: false, example: 'BTCUSDT' })
@@ -274,7 +274,7 @@ export class TradingController {
     @Query('symbol') symbol?: string,
   ) {
     const { exchange: ex, tradingType: tt } = this.getExchangeParams(exchange, tradingType);
-    const service = await this.getFuturesTradingService(ex, tt);
+    const service = await this.getPerpetualTradingService(ex, tt);
     return service.getPositions(symbol);
   }
 
@@ -292,7 +292,7 @@ export class TradingController {
   @ApiQuery({
     name: 'tradingType',
     required: false,
-    enum: ['futures', 'perpetual'],
+    enum: ['perpetual'],
     example: 'perpetual',
   })
   @ApiResponse({ status: 200, description: 'Leverage set successfully' })
@@ -302,7 +302,7 @@ export class TradingController {
     @Body() dto?: SetLeverageDto,
   ) {
     const { exchange: ex, tradingType: tt } = this.getExchangeParams(exchange, tradingType);
-    const service = await this.getFuturesTradingService(ex, tt);
+    const service = await this.getPerpetualTradingService(ex, tt);
     return service.setLeverage(dto!);
   }
 
@@ -320,7 +320,7 @@ export class TradingController {
   @ApiQuery({
     name: 'tradingType',
     required: false,
-    enum: ['futures', 'perpetual'],
+    enum: ['perpetual'],
     example: 'perpetual',
   })
   @ApiResponse({ status: 200, description: 'Leverage retrieved successfully' })
@@ -330,7 +330,7 @@ export class TradingController {
     @Query('tradingType') tradingType?: string,
   ) {
     const { exchange: ex, tradingType: tt } = this.getExchangeParams(exchange, tradingType);
-    const service = await this.getFuturesTradingService(ex, tt);
+    const service = await this.getPerpetualTradingService(ex, tt);
     return service.getLeverage(symbol);
   }
 
@@ -350,7 +350,7 @@ export class TradingController {
   @ApiQuery({
     name: 'tradingType',
     required: false,
-    enum: ['futures', 'perpetual'],
+    enum: ['perpetual'],
     example: 'perpetual',
   })
   @ApiResponse({ status: 200, description: 'Position mode set successfully' })
@@ -360,7 +360,7 @@ export class TradingController {
     @Body() dto?: SetPositionModeDto,
   ) {
     const { exchange: ex, tradingType: tt } = this.getExchangeParams(exchange, tradingType);
-    const service = await this.getFuturesTradingService(ex, tt);
+    const service = await this.getPerpetualTradingService(ex, tt);
     return service.setPositionMode(dto!);
   }
 
@@ -378,7 +378,7 @@ export class TradingController {
   @ApiQuery({
     name: 'tradingType',
     required: false,
-    enum: ['futures', 'perpetual'],
+    enum: ['perpetual'],
     example: 'perpetual',
   })
   @ApiResponse({ status: 200, description: 'Position mode retrieved successfully' })
@@ -387,7 +387,7 @@ export class TradingController {
     @Query('tradingType') tradingType?: string,
   ) {
     const { exchange: ex, tradingType: tt } = this.getExchangeParams(exchange, tradingType);
-    const service = await this.getFuturesTradingService(ex, tt);
+    const service = await this.getPerpetualTradingService(ex, tt);
     return service.getPositionMode();
   }
 
@@ -407,7 +407,7 @@ export class TradingController {
   @ApiQuery({
     name: 'tradingType',
     required: false,
-    enum: ['futures', 'perpetual'],
+    enum: ['perpetual'],
     example: 'perpetual',
   })
   @ApiResponse({ status: 201, description: 'Stop loss set successfully' })
@@ -417,7 +417,7 @@ export class TradingController {
     @Body() dto?: SetStopLossDto,
   ) {
     const { exchange: ex, tradingType: tt } = this.getExchangeParams(exchange, tradingType);
-    const service = await this.getFuturesTradingService(ex, tt);
+    const service = await this.getPerpetualTradingService(ex, tt);
     return service.setStopLoss(dto!);
   }
 
@@ -435,7 +435,7 @@ export class TradingController {
   @ApiQuery({
     name: 'tradingType',
     required: false,
-    enum: ['futures', 'perpetual'],
+    enum: ['perpetual'],
     example: 'perpetual',
   })
   @ApiResponse({ status: 201, description: 'Take profit set successfully' })
@@ -445,7 +445,7 @@ export class TradingController {
     @Body() dto?: SetTakeProfitDto,
   ) {
     const { exchange: ex, tradingType: tt } = this.getExchangeParams(exchange, tradingType);
-    const service = await this.getFuturesTradingService(ex, tt);
+    const service = await this.getPerpetualTradingService(ex, tt);
     return service.setTakeProfit(dto!);
   }
 
@@ -463,7 +463,7 @@ export class TradingController {
   @ApiQuery({
     name: 'tradingType',
     required: false,
-    enum: ['futures', 'perpetual'],
+    enum: ['perpetual'],
     example: 'perpetual',
   })
   @ApiResponse({ status: 200, description: 'Conditional orders cancelled successfully' })
@@ -473,7 +473,7 @@ export class TradingController {
     @Query('tradingType') tradingType?: string,
   ) {
     const { exchange: ex, tradingType: tt } = this.getExchangeParams(exchange, tradingType);
-    const service = await this.getFuturesTradingService(ex, tt);
+    const service = await this.getPerpetualTradingService(ex, tt);
     return service.cancelAllConditionalOrders(symbol);
   }
 
@@ -491,7 +491,7 @@ export class TradingController {
   @ApiQuery({
     name: 'tradingType',
     required: false,
-    enum: ['futures', 'perpetual'],
+    enum: ['perpetual'],
     example: 'perpetual',
   })
   @ApiQuery({ name: 'symbol', required: false, example: 'BTCUSDT' })
@@ -502,7 +502,7 @@ export class TradingController {
     @Query('symbol') symbol?: string,
   ) {
     const { exchange: ex, tradingType: tt } = this.getExchangeParams(exchange, tradingType);
-    const service = await this.getFuturesTradingService(ex, tt);
+    const service = await this.getPerpetualTradingService(ex, tt);
     return service.getFundingRate(symbol);
   }
 
@@ -520,7 +520,7 @@ export class TradingController {
   @ApiQuery({
     name: 'tradingType',
     required: false,
-    enum: ['futures', 'perpetual'],
+    enum: ['perpetual'],
     example: 'perpetual',
   })
   @ApiQuery({ name: 'startTime', required: false, type: Number })
@@ -536,7 +536,7 @@ export class TradingController {
     @Query('limit') limit?: number,
   ) {
     const { exchange: ex, tradingType: tt } = this.getExchangeParams(exchange, tradingType);
-    const service = await this.getFuturesTradingService(ex, tt);
+    const service = await this.getPerpetualTradingService(ex, tt);
     return service.getFundingHistory(symbol, startTime, endTime, limit);
   }
 
@@ -554,7 +554,7 @@ export class TradingController {
   @ApiQuery({
     name: 'tradingType',
     required: false,
-    enum: ['futures', 'perpetual'],
+    enum: ['perpetual'],
     example: 'perpetual',
   })
   @ApiQuery({ name: 'symbol', required: false, example: 'BTCUSDT' })
@@ -565,7 +565,7 @@ export class TradingController {
     @Query('symbol') symbol?: string,
   ) {
     const { exchange: ex, tradingType: tt } = this.getExchangeParams(exchange, tradingType);
-    const service = await this.getFuturesTradingService(ex, tt);
+    const service = await this.getPerpetualTradingService(ex, tt);
     return service.getPositionRisk(symbol);
   }
 
@@ -583,7 +583,7 @@ export class TradingController {
   @ApiQuery({
     name: 'tradingType',
     required: false,
-    enum: ['futures', 'perpetual'],
+    enum: ['perpetual'],
     example: 'perpetual',
   })
   @ApiResponse({ status: 201, description: 'Long position opened successfully' })
@@ -593,7 +593,7 @@ export class TradingController {
     @Body() dto?: OpenPositionDto,
   ) {
     const { exchange: ex, tradingType: tt } = this.getExchangeParams(exchange, tradingType);
-    const service = await this.getFuturesTradingService(ex, tt);
+    const service = await this.getPerpetualTradingService(ex, tt);
     return service.openLong(dto!.symbol, dto!.quantity);
   }
 
@@ -611,7 +611,7 @@ export class TradingController {
   @ApiQuery({
     name: 'tradingType',
     required: false,
-    enum: ['futures', 'perpetual'],
+    enum: ['perpetual'],
     example: 'perpetual',
   })
   @ApiResponse({ status: 201, description: 'Short position opened successfully' })
@@ -621,7 +621,7 @@ export class TradingController {
     @Body() dto?: OpenPositionDto,
   ) {
     const { exchange: ex, tradingType: tt } = this.getExchangeParams(exchange, tradingType);
-    const service = await this.getFuturesTradingService(ex, tt);
+    const service = await this.getPerpetualTradingService(ex, tt);
     return service.openShort(dto!.symbol, dto!.quantity);
   }
 
@@ -639,7 +639,7 @@ export class TradingController {
   @ApiQuery({
     name: 'tradingType',
     required: false,
-    enum: ['futures', 'perpetual'],
+    enum: ['perpetual'],
     example: 'perpetual',
   })
   @ApiResponse({ status: 200, description: 'Long position closed successfully' })
@@ -649,7 +649,7 @@ export class TradingController {
     @Body() dto?: ClosePositionDto,
   ) {
     const { exchange: ex, tradingType: tt } = this.getExchangeParams(exchange, tradingType);
-    const service = await this.getFuturesTradingService(ex, tt);
+    const service = await this.getPerpetualTradingService(ex, tt);
     return service.closeLong(dto!.symbol, dto?.quantity);
   }
 
@@ -667,7 +667,7 @@ export class TradingController {
   @ApiQuery({
     name: 'tradingType',
     required: false,
-    enum: ['futures', 'perpetual'],
+    enum: ['perpetual'],
     example: 'perpetual',
   })
   @ApiResponse({ status: 200, description: 'Short position closed successfully' })
@@ -677,7 +677,7 @@ export class TradingController {
     @Body() dto?: ClosePositionDto,
   ) {
     const { exchange: ex, tradingType: tt } = this.getExchangeParams(exchange, tradingType);
-    const service = await this.getFuturesTradingService(ex, tt);
+    const service = await this.getPerpetualTradingService(ex, tt);
     return service.closeShort(dto!.symbol, dto?.quantity);
   }
 
@@ -695,7 +695,7 @@ export class TradingController {
   @ApiQuery({
     name: 'tradingType',
     required: false,
-    enum: ['futures', 'perpetual'],
+    enum: ['perpetual'],
     example: 'perpetual',
   })
   @ApiResponse({ status: 200, description: 'Position closed successfully' })
@@ -705,7 +705,7 @@ export class TradingController {
     @Body() dto?: ClosePositionDto,
   ) {
     const { exchange: ex, tradingType: tt } = this.getExchangeParams(exchange, tradingType);
-    const service = await this.getFuturesTradingService(ex, tt);
+    const service = await this.getPerpetualTradingService(ex, tt);
     return service.closePosition(dto!.symbol, dto?.positionSide);
   }
 
@@ -723,7 +723,7 @@ export class TradingController {
   @ApiQuery({
     name: 'tradingType',
     required: false,
-    enum: ['futures', 'perpetual'],
+    enum: ['perpetual'],
     example: 'perpetual',
   })
   @ApiResponse({ status: 200, description: 'All positions closed successfully' })
@@ -732,7 +732,7 @@ export class TradingController {
     @Query('tradingType') tradingType?: string,
   ) {
     const { exchange: ex, tradingType: tt } = this.getExchangeParams(exchange, tradingType);
-    const service = await this.getFuturesTradingService(ex, tt);
+    const service = await this.getPerpetualTradingService(ex, tt);
     return service.closeAllPositions();
   }
 
@@ -750,7 +750,7 @@ export class TradingController {
   @ApiQuery({
     name: 'tradingType',
     required: false,
-    enum: ['futures', 'perpetual'],
+    enum: ['perpetual'],
     example: 'perpetual',
   })
   @ApiResponse({ status: 201, description: 'Market buy executed successfully' })
@@ -761,7 +761,7 @@ export class TradingController {
     @Body() dto?: QuickLongShortDto,
   ) {
     const { exchange: ex, tradingType: tt } = this.getExchangeParams(exchange, tradingType);
-    const service = await this.getFuturesTradingService(ex, tt);
+    const service = await this.getPerpetualTradingService(ex, tt);
     // dto fields are required: usdValue, stopLossPercent, takeProfitPercent, leverage
     const usdValue = ntn ? parseFloat(ntn) : dto!.usdValue;
     return service.quickLong(
@@ -787,7 +787,7 @@ export class TradingController {
   @ApiQuery({
     name: 'tradingType',
     required: false,
-    enum: ['futures', 'perpetual'],
+    enum: ['perpetual'],
     example: 'perpetual',
   })
   @ApiResponse({ status: 201, description: 'Market sell executed successfully' })
@@ -798,7 +798,7 @@ export class TradingController {
     @Body() dto?: QuickLongShortDto,
   ) {
     const { exchange: ex, tradingType: tt } = this.getExchangeParams(exchange, tradingType);
-    const service = await this.getFuturesTradingService(ex, tt);
+    const service = await this.getPerpetualTradingService(ex, tt);
     const usdValue = ntn ? parseFloat(ntn) : dto!.usdValue;
     return service.quickShort(
       dto!.symbol,
@@ -823,7 +823,7 @@ export class TradingController {
   @ApiQuery({
     name: 'tradingType',
     required: false,
-    enum: ['futures', 'perpetual'],
+    enum: ['perpetual'],
     example: 'perpetual',
   })
   @ApiBody({
@@ -846,7 +846,7 @@ export class TradingController {
     @Body('symbol') symbol?: string,
   ) {
     const { exchange: ex, tradingType: tt } = this.getExchangeParams(exchange, tradingType);
-    const service = await this.getFuturesTradingService(ex, tt);
+    const service = await this.getPerpetualTradingService(ex, tt);
     if (!symbol) {
       return {
         success: false,

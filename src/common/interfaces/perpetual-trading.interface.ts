@@ -1,6 +1,6 @@
 /**
- * Futures/Perpetuals Trading Service Interface
- * Extends base trading interface with futures-specific features
+ * Perpetual Trading Service Interface
+ * Extends base trading interface with perpetual-specific features
  */
 
 import { ApiResponse, Position, PositionSide, Order } from '../types/exchange.types';
@@ -36,10 +36,10 @@ export interface SetTakeProfitParams {
 }
 
 /**
- * Futures Trading Service Interface
- * All futures/perps exchanges must implement this interface
+ * Perpetual Trading Service Interface
+ * All perpetual/perps exchanges must implement this interface
  */
-export interface IFuturesTradingService extends IBaseTradingService {
+export interface IPerpetualTradingService extends IBaseTradingService {
   /**
    * Position Management
    */

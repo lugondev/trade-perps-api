@@ -3,10 +3,10 @@ import { AsterModule } from './aster/aster.module';
 import { HyperliquidModule } from './hyperliquid/hyperliquid.module';
 import { ExchangeRegistry } from '../common/factory/exchange.factory';
 
-// Import Aster Futures service classes
-import { AsterFuturesTradingService } from './aster/futures/services/futures-trading.service';
-import { AsterFuturesBalanceService } from './aster/futures/services/futures-balance.service';
-import { AsterFuturesMarketService } from './aster/futures/services/futures-market.service';
+// Import Aster Perpetual service classes
+import { AsterPerpetualTradingService } from './aster/perpetual/services/perpetual-trading.service';
+import { AsterPerpetualBalanceService } from './aster/perpetual/services/perpetual-balance.service';
+import { AsterPerpetualMarketService } from './aster/perpetual/services/perpetual-market.service';
 
 // Import Hyperliquid Perp service classes
 import { HyperliquidPerpTradingService } from './hyperliquid/perp/services/perp-trading.service';
@@ -21,13 +21,13 @@ export class ExchangesModule implements OnModuleInit {
   constructor(private readonly registry: ExchangeRegistry) {}
 
   onModuleInit() {
-    // Register Aster Futures
+    // Register Aster Perpetual
     this.registry.register({
       exchange: 'aster',
       tradingType: 'perpetual',
-      tradingService: AsterFuturesTradingService,
-      balanceService: AsterFuturesBalanceService,
-      marketService: AsterFuturesMarketService,
+      tradingService: AsterPerpetualTradingService,
+      balanceService: AsterPerpetualBalanceService,
+      marketService: AsterPerpetualMarketService,
     });
 
     // Register Hyperliquid Perpetual

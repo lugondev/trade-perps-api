@@ -4,7 +4,7 @@
  */
 
 export type ExchangeName = 'aster' | 'hyperliquid' | 'binance' | 'orderly';
-export type TradingType = 'futures' | 'perpetual';
+export type TradingType = 'perpetual';
 
 export enum OrderSide {
   BUY = 'BUY',

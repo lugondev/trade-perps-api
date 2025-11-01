@@ -3,7 +3,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { ApiKeyAuth } from '../../common/decorators/api-key.decorator';
 import { ExchangeServiceFactory } from '../../common/factory/exchange.factory';
 import { ExchangeName, TradingType } from '../../common/types/exchange.types';
-import { IFuturesMarketService } from '../../common/interfaces';
+import { IPerpetualMarketService } from '../../common/interfaces';
 
 @ApiTags('� Market API')
 @ApiKeyAuth()
@@ -29,11 +29,11 @@ export class MarketController {
   private async getFuturesMarketService(
     exchange: ExchangeName,
     tradingType: TradingType,
-  ): Promise<IFuturesMarketService> {
+  ): Promise<IPerpetualMarketService> {
     return this.exchangeFactory.getMarketService(
       exchange,
       tradingType,
-    ) as Promise<IFuturesMarketService>;
+    ) as Promise<IPerpetualMarketService>;
   }
 
   /**
@@ -50,7 +50,7 @@ export class MarketController {
   @ApiQuery({
     name: 'tradingType',
     required: false,
-    enum: ['futures', 'perpetual'],
+    enum: ['perpetual'],
     example: 'perpetual',
   })
   @ApiResponse({ status: 200, description: 'Price retrieved successfully' })
@@ -78,7 +78,7 @@ export class MarketController {
   @ApiQuery({
     name: 'tradingType',
     required: false,
-    enum: ['futures', 'perpetual'],
+    enum: ['perpetual'],
     example: 'perpetual',
   })
   @ApiResponse({ status: 200, description: 'Prices retrieved successfully' })
@@ -105,7 +105,7 @@ export class MarketController {
   @ApiQuery({
     name: 'tradingType',
     required: false,
-    enum: ['futures', 'perpetual'],
+    enum: ['perpetual'],
     example: 'perpetual',
   })
   @ApiQuery({ name: 'limit', required: false, type: Number, example: 20 })
@@ -135,7 +135,7 @@ export class MarketController {
   @ApiQuery({
     name: 'tradingType',
     required: false,
-    enum: ['futures', 'perpetual'],
+    enum: ['perpetual'],
     example: 'perpetual',
   })
   @ApiQuery({ name: 'limit', required: false, type: Number, example: 100 })
@@ -165,7 +165,7 @@ export class MarketController {
   @ApiQuery({
     name: 'tradingType',
     required: false,
-    enum: ['futures', 'perpetual'],
+    enum: ['perpetual'],
     example: 'perpetual',
   })
   @ApiQuery({ name: 'interval', required: true, example: '1h' })
@@ -201,7 +201,7 @@ export class MarketController {
   @ApiQuery({
     name: 'tradingType',
     required: false,
-    enum: ['futures', 'perpetual'],
+    enum: ['perpetual'],
     example: 'perpetual',
   })
   @ApiResponse({ status: 200, description: 'Ticker retrieved successfully' })
@@ -229,7 +229,7 @@ export class MarketController {
   @ApiQuery({
     name: 'tradingType',
     required: false,
-    enum: ['futures', 'perpetual'],
+    enum: ['perpetual'],
     example: 'perpetual',
   })
   @ApiResponse({ status: 200, description: 'Funding rate retrieved successfully' })
@@ -257,7 +257,7 @@ export class MarketController {
   @ApiQuery({
     name: 'tradingType',
     required: false,
-    enum: ['futures', 'perpetual'],
+    enum: ['perpetual'],
     example: 'perpetual',
   })
   @ApiQuery({ name: 'startTime', required: false, type: Number })
@@ -291,7 +291,7 @@ export class MarketController {
   @ApiQuery({
     name: 'tradingType',
     required: false,
-    enum: ['futures', 'perpetual'],
+    enum: ['perpetual'],
     example: 'perpetual',
   })
   @ApiResponse({ status: 200, description: 'Contract info retrieved successfully' })
@@ -319,7 +319,7 @@ export class MarketController {
   @ApiQuery({
     name: 'tradingType',
     required: false,
-    enum: ['futures', 'perpetual'],
+    enum: ['perpetual'],
     example: 'perpetual',
   })
   @ApiResponse({ status: 200, description: 'Symbols retrieved successfully' })
@@ -346,7 +346,7 @@ export class MarketController {
   @ApiQuery({
     name: 'tradingType',
     required: false,
-    enum: ['futures', 'perpetual'],
+    enum: ['perpetual'],
     example: 'perpetual',
   })
   @ApiResponse({ status: 200, description: 'Open interest retrieved successfully' })
@@ -374,7 +374,7 @@ export class MarketController {
   @ApiQuery({
     name: 'tradingType',
     required: false,
-    enum: ['futures', 'perpetual'],
+    enum: ['perpetual'],
     example: 'perpetual',
   })
   @ApiQuery({ name: 'period', required: true, example: '5m' })
@@ -404,7 +404,7 @@ export class MarketController {
   @ApiQuery({
     name: 'tradingType',
     required: false,
-    enum: ['futures', 'perpetual'],
+    enum: ['perpetual'],
     example: 'perpetual',
   })
   @ApiResponse({ status: 200, description: 'Mark price retrieved successfully' })
@@ -432,7 +432,7 @@ export class MarketController {
   @ApiQuery({
     name: 'tradingType',
     required: false,
-    enum: ['futures', 'perpetual'],
+    enum: ['perpetual'],
     example: 'perpetual',
   })
   @ApiResponse({ status: 200, description: 'Exchange info retrieved successfully' })

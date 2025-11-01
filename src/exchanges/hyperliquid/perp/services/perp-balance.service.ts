@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { formatSymbol, formatSymbolResponse } from './perp-market.utils';
-import { IFuturesBalanceService } from '../../../../common/interfaces';
+import { IPerpetualBalanceService } from '../../../../common/interfaces';
 import {
   ApiResponse,
   Balance,
@@ -10,7 +10,7 @@ import {
 import { HyperliquidApiService } from '../../shared/hyperliquid-api.service';
 
 @Injectable()
-export class HyperliquidPerpBalanceService implements IFuturesBalanceService {
+export class HyperliquidPerpBalanceService implements IPerpetualBalanceService {
   private readonly logger = new Logger(HyperliquidPerpBalanceService.name);
 
   constructor(private readonly apiService: HyperliquidApiService) {}
