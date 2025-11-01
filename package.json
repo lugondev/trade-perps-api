@@ -17,9 +17,13 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "test:sign": "ts-node -r tsconfig-paths/register test-hyperliquid-signing.ts",
+    "test:sign:js": "node test-hyperliquid-sign.js",
+    "check:wallet": "ts-node -r tsconfig-paths/register check-wallet-setup.ts"
   },
   "dependencies": {
+    "@msgpack/msgpack": "^3.1.2",
     "@nestjs/common": "^10.3.0",
     "@nestjs/config": "^3.1.1",
     "@nestjs/core": "^10.3.0",
@@ -33,7 +37,6 @@
     "crypto": "^1.0.1",
     "dotenv": "^17.2.3",
     "ethers": "^6.15.0",
-    "msgpack-lite": "^0.1.26",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.1",
     "web3": "^4.16.0",

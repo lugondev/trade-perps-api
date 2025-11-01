@@ -33,6 +33,39 @@ export class HyperliquidPerpTradingService implements IFuturesTradingService {
   ) {}
 
   /**
+   * Wait for position to appear after market order
+   * Retries up to maxRetries times with delay between attempts
+   */
+  private async waitForPosition(
+    symbol: string,
+    maxRetries: number = 10,
+    delayMs: number = 800,
+  ): Promise<boolean> {
+    for (let i = 0; i < maxRetries; i++) {
+      const positionsResponse = await this.positionService.getPositions(symbol);
+
+      if (positionsResponse.success && positionsResponse.data) {
+        const position = Array.isArray(positionsResponse.data)
+          ? positionsResponse.data[0]
+          : positionsResponse.data;
+
+        if (position && parseFloat(position.size) > 0) {
+          this.logger.log(`Position found for ${symbol} after ${i + 1} attempts`);
+          return true;
+        }
+      }
+
+      if (i < maxRetries - 1) {
+        this.logger.log(`Waiting for position ${symbol}... attempt ${i + 1}/${maxRetries}`);
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+      }
+    }
+
+    this.logger.warn(`Position not found for ${symbol} after ${maxRetries} attempts`);
+    return false;
+  }
+
+  /**
    * Place a new order - implements interface
    */
   async placeOrder(params: PlaceOrderParams): Promise<ApiResponse<Order>> {
@@ -203,10 +236,25 @@ export class HyperliquidPerpTradingService implements IFuturesTradingService {
         };
       }
 
+      // IMPORTANT: Cancel all conditional orders first before closing positions
+      this.logger.log('Canceling all conditional orders before closing all positions');
+      await this.riskManagementService.cancelAllConditionalOrders('');
+
       const results = await Promise.all(
         positions.map(async pos => {
           try {
+            // Validate position size
+            const parsedSize = parseFloat(pos.size || '0');
+            if (!parsedSize || parsedSize <= 0) {
+              this.logger.warn(
+                `Skipping position with invalid size: ${pos.symbol} size=${pos.size}`,
+              );
+              throw new Error(`Invalid position size: ${pos.size}`);
+            }
+
             const side = pos.side === PositionSide.LONG ? OrderSide.SELL : OrderSide.BUY;
+
+            this.logger.log(`Closing ${pos.side} position: ${pos.size} ${pos.symbol}`);
 
             const orderResponse = await this.orderPlacementService.placeMarketOrder({
               symbol: pos.symbol,
@@ -214,6 +262,13 @@ export class HyperliquidPerpTradingService implements IFuturesTradingService {
               quantity: pos.size,
               reduceOnly: true,
             });
+
+            if (!orderResponse.success) {
+              this.logger.error(
+                `Failed to close position for ${pos.symbol}: ${orderResponse.error}`,
+              );
+              throw new Error(orderResponse.error || 'Failed to place close order');
+            }
 
             return orderResponse.data!;
           } catch (error: any) {
@@ -378,7 +433,29 @@ export class HyperliquidPerpTradingService implements IFuturesTradingService {
         };
       }
 
+      // Validate quantity
+      const parsedQty = parseFloat(position.size || '0');
+      if (!parsedQty || parsedQty <= 0) {
+        this.logger.error(
+          `Refusing to close position: invalid size=${position.size} for ${symbol}`,
+        );
+        return {
+          success: false,
+          error: `Invalid position size: ${position.size}`,
+          timestamp: Date.now(),
+          exchange: 'hyperliquid',
+          tradingType: 'perpetual',
+        };
+      }
+
+      // IMPORTANT: Cancel all TP/SL orders before closing position
+      this.logger.log(`Canceling all conditional orders for ${symbol} before closing position`);
+      await this.riskManagementService.cancelAllConditionalOrders(symbol);
+
       const side = position.side === PositionSide.LONG ? OrderSide.SELL : OrderSide.BUY;
+
+      this.logger.log(`Closing ${position.side} position: ${position.size} ${symbol}`);
+      this.logger.debug(`Position being closed: ${JSON.stringify(position)}`);
 
       return this.orderPlacementService.placeMarketOrder({
         symbol,
@@ -466,10 +543,36 @@ export class HyperliquidPerpTradingService implements IFuturesTradingService {
     leverage: number,
   ): Promise<ApiResponse<any>> {
     try {
-      // set leverage
+      // Check balance first
+      const userState = await this.apiService.getUserState();
+      if (!userState.success || !userState.data) {
+        return {
+          success: false,
+          error: 'Failed to get account state',
+          timestamp: Date.now(),
+          exchange: 'hyperliquid',
+          tradingType: 'perpetual',
+        };
+      }
+
+      const accountValue = parseFloat(userState.data.crossMarginSummary?.accountValue || '0');
+      const requiredMargin = usdValue; // Required margin for the position
+
+      if (accountValue < requiredMargin) {
+        return {
+          success: false,
+          error: `Insufficient balance. Required: $${requiredMargin}, Available: $${accountValue}`,
+          timestamp: Date.now(),
+          exchange: 'hyperliquid',
+          tradingType: 'perpetual',
+        };
+      }
+
+      // 1. Set leverage first
+      this.logger.log(`Setting leverage ${leverage}x for ${symbol}`);
       await this.positionService.setLeverage({ symbol, leverage });
 
-      // get current price
+      // 2. Get current price
       const priceResponse = await this.marketService.getCurrentPrice(symbol);
       if (!priceResponse.success || !priceResponse.data) {
         return priceResponse;
@@ -478,30 +581,57 @@ export class HyperliquidPerpTradingService implements IFuturesTradingService {
       const currentPrice = parseFloat(priceResponse.data);
       const quantity = ((usdValue * leverage) / currentPrice).toFixed(8);
 
-      // place entry
+      this.logger.log(`Opening long position: ${quantity} ${symbol} @ $${currentPrice}`);
+
+      // 3. Place entry order
       const mainOrder = await this.orderPlacementService.marketBuy(symbol, quantity);
-      if (!mainOrder.success) return mainOrder;
+      if (!mainOrder.success) {
+        this.logger.error('Failed to place entry order:', mainOrder.error);
+        return mainOrder;
+      }
 
-      // compute SL/TP
-      const stopLossPrice = (currentPrice * (1 - stopLossPercent / 100)).toFixed(2);
-      const takeProfitPrice = (currentPrice * (1 + takeProfitPercent / 100)).toFixed(2);
+      this.logger.log(`Entry order placed successfully: ${JSON.stringify(mainOrder.data)}`);
 
-      const stopLoss = await this.riskManagementService.setStopLoss({
+      // 4. Compute SL/TP prices immediately (use 1 decimal for Hyperliquid)
+      const stopLossPrice = (currentPrice * (1 - stopLossPercent / 100)).toFixed(1);
+      const takeProfitPrice = (currentPrice * (1 + takeProfitPercent / 100)).toFixed(1);
+
+      this.logger.log(
+        `Placing TP @ ${takeProfitPrice} and SL @ ${stopLossPrice} with quantity ${quantity}`,
+      );
+
+      // 5. Place TP/SL orders immediately (with retry logic)
+      // For LONG: SL is SELL, TP is SELL
+      const stopLoss = await this.placeStopLossWithRetry(
         symbol,
-        stopPrice: stopLossPrice,
+        stopLossPrice,
         quantity,
-        // side will be inferred inside riskManagementService
-      });
-
-      const takeProfit = await this.riskManagementService.setTakeProfit({
+        OrderSide.SELL,
+        3,
+      );
+      const takeProfit = await this.placeTakeProfitWithRetry(
         symbol,
         takeProfitPrice,
         quantity,
-      });
+        OrderSide.SELL,
+        3,
+      );
+
+      this.logger.log('Quick long completed successfully');
+      this.logger.log(`TP Order: ${stopLoss.success ? stopLoss.data?.orderId : 'FAILED'}`);
+      this.logger.log(`SL Order: ${takeProfit.success ? takeProfit.data?.orderId : 'FAILED'}`);
 
       return {
         success: true,
-        data: { mainOrder, stopLoss, takeProfit },
+        data: {
+          mainOrder,
+          stopLoss,
+          takeProfit,
+          quantity,
+          entryPrice: currentPrice,
+          stopLossPrice,
+          takeProfitPrice,
+        },
         timestamp: Date.now(),
         exchange: 'hyperliquid',
         tradingType: 'perpetual',
@@ -536,10 +666,11 @@ export class HyperliquidPerpTradingService implements IFuturesTradingService {
     leverage: number,
   ): Promise<ApiResponse<any>> {
     try {
-      // set leverage
+      // 1. Set leverage first
+      this.logger.log(`Setting leverage ${leverage}x for ${symbol}`);
       await this.positionService.setLeverage({ symbol, leverage });
 
-      // get current price
+      // 2. Get current price
       const priceResponse = await this.marketService.getCurrentPrice(symbol);
       if (!priceResponse.success || !priceResponse.data) {
         return priceResponse;
@@ -548,29 +679,56 @@ export class HyperliquidPerpTradingService implements IFuturesTradingService {
       const currentPrice = parseFloat(priceResponse.data);
       const quantity = ((usdValue * leverage) / currentPrice).toFixed(8);
 
-      // place entry
+      this.logger.log(`Opening short position: ${quantity} ${symbol} @ $${currentPrice}`);
+
+      // 3. Place entry order
       const mainOrder = await this.orderPlacementService.marketSell(symbol, quantity);
-      if (!mainOrder.success) return mainOrder;
+      if (!mainOrder.success) {
+        this.logger.error('Failed to place entry order:', mainOrder.error);
+        return mainOrder;
+      }
 
-      // compute SL/TP
-      const stopLossPrice = (currentPrice * (1 + stopLossPercent / 100)).toFixed(2);
-      const takeProfitPrice = (currentPrice * (1 - takeProfitPercent / 100)).toFixed(2);
+      this.logger.log(`Entry order placed successfully: ${JSON.stringify(mainOrder.data)}`);
 
-      const stopLoss = await this.riskManagementService.setStopLoss({
+      // 4. Compute SL/TP prices immediately (use 1 decimal for Hyperliquid - SHORT: SL higher, TP lower)
+      const stopLossPrice = (currentPrice * (1 + stopLossPercent / 100)).toFixed(1);
+      const takeProfitPrice = (currentPrice * (1 - takeProfitPercent / 100)).toFixed(1);
+
+      this.logger.log(
+        `Placing TP @ ${takeProfitPrice} and SL @ ${stopLossPrice} with quantity ${quantity}`,
+      );
+
+      // 5. Place TP/SL orders immediately (with retry logic) - SHORT position closes with BUY orders
+      const stopLoss = await this.placeStopLossWithRetry(
         symbol,
-        stopPrice: stopLossPrice,
+        stopLossPrice,
         quantity,
-      });
-
-      const takeProfit = await this.riskManagementService.setTakeProfit({
+        OrderSide.BUY,
+        3,
+      );
+      const takeProfit = await this.placeTakeProfitWithRetry(
         symbol,
         takeProfitPrice,
         quantity,
-      });
+        OrderSide.BUY,
+        3,
+      );
+
+      this.logger.log('Quick short completed successfully');
+      this.logger.log(`TP Order: ${stopLoss.success ? stopLoss.data?.orderId : 'FAILED'}`);
+      this.logger.log(`SL Order: ${takeProfit.success ? takeProfit.data?.orderId : 'FAILED'}`);
 
       return {
         success: true,
-        data: { mainOrder, stopLoss, takeProfit },
+        data: {
+          mainOrder,
+          stopLoss,
+          takeProfit,
+          quantity,
+          entryPrice: currentPrice,
+          stopLossPrice,
+          takeProfitPrice,
+        },
         timestamp: Date.now(),
         exchange: 'hyperliquid',
         tradingType: 'perpetual',
@@ -620,6 +778,28 @@ export class HyperliquidPerpTradingService implements IFuturesTradingService {
       }
 
       const closeQuantity = quantity || position.size;
+
+      // Validate quantity
+      const parsedQty = parseFloat(closeQuantity || '0');
+      if (!parsedQty || parsedQty <= 0) {
+        this.logger.error(
+          `Refusing to close long: invalid close quantity=${closeQuantity} for ${symbol}`,
+        );
+        return {
+          success: false,
+          error: `Invalid close quantity: ${closeQuantity}`,
+          timestamp: Date.now(),
+          exchange: 'hyperliquid',
+          tradingType: 'perpetual',
+        };
+      }
+
+      // IMPORTANT: Cancel all TP/SL orders before closing position
+      this.logger.log(`Canceling all conditional orders for ${symbol} before closing position`);
+      await this.riskManagementService.cancelAllConditionalOrders(symbol);
+
+      this.logger.log(`Closing long position: ${closeQuantity} ${symbol}`);
+      this.logger.debug(`Position being closed: ${JSON.stringify(position)}`);
 
       return this.orderPlacementService.placeMarketOrder({
         symbol,
@@ -673,6 +853,28 @@ export class HyperliquidPerpTradingService implements IFuturesTradingService {
 
       const closeQuantity = quantity || position.size;
 
+      // Validate quantity
+      const parsedQty = parseFloat(closeQuantity || '0');
+      if (!parsedQty || parsedQty <= 0) {
+        this.logger.error(
+          `Refusing to close short: invalid close quantity=${closeQuantity} for ${symbol}`,
+        );
+        return {
+          success: false,
+          error: `Invalid close quantity: ${closeQuantity}`,
+          timestamp: Date.now(),
+          exchange: 'hyperliquid',
+          tradingType: 'perpetual',
+        };
+      }
+
+      // IMPORTANT: Cancel all TP/SL orders before closing position
+      this.logger.log(`Canceling all conditional orders for ${symbol} before closing position`);
+      await this.riskManagementService.cancelAllConditionalOrders(symbol);
+
+      this.logger.log(`Closing short position: ${closeQuantity} ${symbol}`);
+      this.logger.debug(`Position being closed: ${JSON.stringify(position)}`);
+
       return this.orderPlacementService.placeMarketOrder({
         symbol,
         side: OrderSide.BUY,
@@ -689,6 +891,120 @@ export class HyperliquidPerpTradingService implements IFuturesTradingService {
         tradingType: 'perpetual',
       };
     }
+  }
+
+  /**
+   * Place stop loss with retry logic
+   */
+  private async placeStopLossWithRetry(
+    symbol: string,
+    stopPrice: string,
+    quantity: string,
+    side: OrderSide,
+    maxRetries: number = 3,
+  ): Promise<ApiResponse<Order>> {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        this.logger.log(`Attempt ${attempt}/${maxRetries}: Placing stop loss @ ${stopPrice}`);
+
+        const result = await this.riskManagementService.setStopLoss({
+          symbol,
+          stopPrice,
+          quantity,
+          side,
+        });
+
+        if (result.success) {
+          this.logger.log(`✅ Stop loss placed successfully: Order ID ${result.data?.orderId}`);
+          return result;
+        }
+
+        this.logger.warn(`❌ Stop loss attempt ${attempt} failed: ${result.error}`);
+
+        if (attempt < maxRetries) {
+          // Wait 1 second before retry
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      } catch (error: any) {
+        this.logger.error(`Stop loss attempt ${attempt} error: ${error.message}`);
+        if (attempt === maxRetries) {
+          return {
+            success: false,
+            error: error.message,
+            timestamp: Date.now(),
+            exchange: 'hyperliquid',
+            tradingType: 'perpetual',
+          };
+        }
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
+
+    return {
+      success: false,
+      error: 'Failed to place stop loss after retries',
+      timestamp: Date.now(),
+      exchange: 'hyperliquid',
+      tradingType: 'perpetual',
+    };
+  }
+
+  /**
+   * Place take profit with retry logic
+   */
+  private async placeTakeProfitWithRetry(
+    symbol: string,
+    takeProfitPrice: string,
+    quantity: string,
+    side: OrderSide,
+    maxRetries: number = 3,
+  ): Promise<ApiResponse<Order>> {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        this.logger.log(
+          `Attempt ${attempt}/${maxRetries}: Placing take profit @ ${takeProfitPrice}`,
+        );
+
+        const result = await this.riskManagementService.setTakeProfit({
+          symbol,
+          takeProfitPrice,
+          quantity,
+          side,
+        });
+
+        if (result.success) {
+          this.logger.log(`✅ Take profit placed successfully: Order ID ${result.data?.orderId}`);
+          return result;
+        }
+
+        this.logger.warn(`❌ Take profit attempt ${attempt} failed: ${result.error}`);
+
+        if (attempt < maxRetries) {
+          // Wait 1 second before retry
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      } catch (error: any) {
+        this.logger.error(`Take profit attempt ${attempt} error: ${error.message}`);
+        if (attempt === maxRetries) {
+          return {
+            success: false,
+            error: error.message,
+            timestamp: Date.now(),
+            exchange: 'hyperliquid',
+            tradingType: 'perpetual',
+          };
+        }
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
+
+    return {
+      success: false,
+      error: 'Failed to place take profit after retries',
+      timestamp: Date.now(),
+      exchange: 'hyperliquid',
+      tradingType: 'perpetual',
+    };
   }
 
   /**

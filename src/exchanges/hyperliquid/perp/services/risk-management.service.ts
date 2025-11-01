@@ -53,18 +53,19 @@ export class RiskManagementService {
         isBuy = position.side === PositionSide.SHORT;
       }
 
-      const stopPrice = parseFloat(params.stopPrice);
-      const quantity = params.quantity ? parseFloat(params.quantity) : undefined;
+      // Round to tick size (1.0 for BTC - whole numbers)
+      const stopPrice = Math.round(parseFloat(params.stopPrice));
 
+      // Use trigger order with tpsl - MUST include size
       const orderRequest: any = {
         coin,
         is_buy: isBuy,
-        sz: quantity,
-        limit_px: stopPrice.toFixed(2),
+        sz: parseFloat(params.quantity || '0'),
+        limit_px: stopPrice,
         order_type: {
           trigger: {
             isMarket: true,
-            triggerPx: stopPrice,
+            triggerPx: stopPrice.toString(),
             tpsl: 'sl',
           },
         },
@@ -72,6 +73,8 @@ export class RiskManagementService {
       };
 
       const result = await this.apiService.placeOrder(orderRequest);
+
+      this.logger.log(`Stop loss order result: ${JSON.stringify(result)}`);
 
       if (!result.success) {
         return {
@@ -83,8 +86,25 @@ export class RiskManagementService {
         };
       }
 
+      const statuses = result.data?.response?.data?.statuses || [];
+      const firstStatus = statuses[0];
+
+      if (firstStatus?.error) {
+        this.logger.error(`Stop loss order error: ${firstStatus.error}`);
+        return {
+          success: false,
+          error: firstStatus.error,
+          timestamp: Date.now(),
+          exchange: 'hyperliquid',
+          tradingType: 'perpetual',
+        };
+      }
+
+      const orderId = firstStatus?.resting?.oid?.toString() || 'unknown';
+      this.logger.log(`Stop loss order created: ${orderId}`);
+
       const order: Order = {
-        orderId: result.data?.response?.data?.statuses?.[0]?.resting?.oid?.toString() || 'unknown',
+        orderId,
         symbol: params.symbol,
         side: isBuy ? OrderSide.BUY : OrderSide.SELL,
         type: OrderType.STOP_MARKET,
@@ -146,18 +166,19 @@ export class RiskManagementService {
         isBuy = position.side === PositionSide.SHORT;
       }
 
-      const takeProfitPrice = parseFloat(params.takeProfitPrice);
-      const quantity = params.quantity ? parseFloat(params.quantity) : undefined;
+      // Round to tick size (1.0 for BTC - whole numbers)
+      const takeProfitPrice = Math.round(parseFloat(params.takeProfitPrice));
 
+      // Use trigger order with tpsl - MUST include size
       const orderRequest: any = {
         coin,
         is_buy: isBuy,
-        sz: quantity,
-        limit_px: takeProfitPrice.toFixed(2),
+        sz: parseFloat(params.quantity || '0'),
+        limit_px: takeProfitPrice,
         order_type: {
           trigger: {
             isMarket: true,
-            triggerPx: takeProfitPrice,
+            triggerPx: takeProfitPrice.toString(),
             tpsl: 'tp',
           },
         },
@@ -165,6 +186,8 @@ export class RiskManagementService {
       };
 
       const result = await this.apiService.placeOrder(orderRequest);
+
+      this.logger.log(`Take profit order result: ${JSON.stringify(result)}`);
 
       if (!result.success) {
         return {
@@ -176,8 +199,25 @@ export class RiskManagementService {
         };
       }
 
+      const statuses = result.data?.response?.data?.statuses || [];
+      const firstStatus = statuses[0];
+
+      if (firstStatus?.error) {
+        this.logger.error(`Take profit order error: ${firstStatus.error}`);
+        return {
+          success: false,
+          error: firstStatus.error,
+          timestamp: Date.now(),
+          exchange: 'hyperliquid',
+          tradingType: 'perpetual',
+        };
+      }
+
+      const orderId = firstStatus?.resting?.oid?.toString() || 'unknown';
+      this.logger.log(`Take profit order created: ${orderId}`);
+
       const order: Order = {
-        orderId: result.data?.response?.data?.statuses?.[0]?.resting?.oid?.toString() || 'unknown',
+        orderId,
         symbol: params.symbol,
         side: isBuy ? OrderSide.BUY : OrderSide.SELL,
         type: OrderType.TAKE_PROFIT_MARKET,

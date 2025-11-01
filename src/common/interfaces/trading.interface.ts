@@ -43,6 +43,23 @@ export interface LimitOrderParams {
   reduceOnly?: boolean;
 }
 
+export interface OrderWithTpSlParams {
+  symbol: string;
+  side: OrderSide;
+  type: OrderType;
+  quantity: string;
+  price?: string;
+  leverage?: number;
+  stopLoss?: {
+    price: string;
+  };
+  takeProfit?: {
+    price: string;
+  };
+  timeInForce?: TimeInForce;
+  clientOrderId?: string;
+}
+
 export interface CancelOrderParams {
   symbol: string;
   orderId?: string;

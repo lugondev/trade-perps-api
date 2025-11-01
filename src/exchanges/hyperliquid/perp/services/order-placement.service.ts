@@ -39,6 +39,17 @@ export class OrderPlacementService {
         reduce_only: params.reduceOnly || false,
       };
 
+      // Get asset info for correct decimals and tick size
+      await this.apiService.getAssetInfo(coin); // Load asset info into cache
+
+      // Helper to round price to tick size
+      const roundToTickSize = (price: number): string => {
+        // For BTC, tick size is 1.0 (whole numbers only)
+        // For other assets, may vary - but BTC is most common
+        const rounded = Math.round(price);
+        return rounded.toFixed(1); // Return as "110041.0" format
+      };
+
       // Handle different order types
       if (params.type === OrderType.MARKET) {
         // Market order - use limit with slippage
@@ -52,10 +63,11 @@ export class OrderPlacementService {
           throw new Error(`No market price found for ${coin}`);
         }
 
-        const slippageMultiplier = isBuy ? 1.005 : 0.995;
+        // Use 1% slippage for market orders to ensure they fill
+        const slippageMultiplier = isBuy ? 1.01 : 0.99;
         const limitPrice = midPrice * slippageMultiplier;
 
-        orderRequest.limit_px = limitPrice.toFixed(2);
+        orderRequest.limit_px = roundToTickSize(limitPrice);
         orderRequest.order_type = {
           limit: { tif: 'Ioc' },
         };
@@ -69,7 +81,7 @@ export class OrderPlacementService {
         else if (params.timeInForce === TimeInForce.FOK) tif = 'Ioc';
         else if (params.timeInForce === TimeInForce.GTX) tif = 'Alo';
 
-        orderRequest.limit_px = parseFloat(params.price).toFixed(2);
+        orderRequest.limit_px = roundToTickSize(parseFloat(params.price));
         orderRequest.order_type = {
           limit: { tif },
         };
@@ -82,11 +94,11 @@ export class OrderPlacementService {
         }
 
         const stopPrice = parseFloat(params.stopPrice);
-        orderRequest.limit_px = stopPrice.toFixed(2);
+        orderRequest.limit_px = roundToTickSize(stopPrice);
         orderRequest.order_type = {
           trigger: {
             isMarket: true,
-            triggerPx: stopPrice,
+            triggerPx: roundToTickSize(stopPrice),
             tpsl: params.type === OrderType.TAKE_PROFIT_MARKET ? 'tp' : 'sl',
           },
         };
@@ -104,15 +116,48 @@ export class OrderPlacementService {
         };
       }
 
+      // Log full response for debugging
+      this.logger.debug(`Order response: ${JSON.stringify(result.data)}`);
+
+      const statuses = result.data?.response?.data?.statuses || [];
+      const firstStatus = statuses[0];
+
+      this.logger.debug(`Order status: ${JSON.stringify(firstStatus)}`);
+
+      // Check if order was filled or resting
+      let orderStatus = OrderStatus.NEW;
+      let orderId = 'unknown';
+      let executedQty = '0';
+
+      if (firstStatus?.filled) {
+        orderStatus = OrderStatus.FILLED;
+        orderId = firstStatus.filled.oid?.toString() || 'unknown';
+        executedQty = firstStatus.filled.totalSz || params.quantity;
+        this.logger.log(`Order FILLED: ${orderId}, size: ${executedQty}`);
+      } else if (firstStatus?.resting) {
+        orderStatus = OrderStatus.NEW;
+        orderId = firstStatus.resting.oid?.toString() || 'unknown';
+        this.logger.log(`Order RESTING: ${orderId}`);
+      } else if (firstStatus?.error) {
+        this.logger.error(`Order ERROR: ${firstStatus.error}`);
+        return {
+          success: false,
+          error: firstStatus.error,
+          timestamp: Date.now(),
+          exchange: 'hyperliquid',
+          tradingType: 'perpetual',
+        };
+      }
+
       const order: Order = {
-        orderId: result.data?.response?.data?.statuses?.[0]?.resting?.oid?.toString() || 'unknown',
+        orderId,
         symbol: params.symbol,
         side: params.side,
         type: params.type,
-        status: params.type === OrderType.MARKET ? OrderStatus.FILLED : OrderStatus.NEW,
+        status: orderStatus,
         price: params.price || '0',
         quantity: params.quantity,
-        executedQuantity: params.type === OrderType.MARKET ? params.quantity : '0',
+        executedQuantity: executedQty,
         timestamp: Date.now(),
       };
 

@@ -757,14 +757,16 @@ export class TradingController {
   async quickLong(
     @Query('exchange') exchange?: string,
     @Query('tradingType') tradingType?: string,
+    @Query('ntn') ntn?: string,
     @Body() dto?: QuickLongShortDto,
   ) {
     const { exchange: ex, tradingType: tt } = this.getExchangeParams(exchange, tradingType);
     const service = await this.getFuturesTradingService(ex, tt);
     // dto fields are required: usdValue, stopLossPercent, takeProfitPercent, leverage
+    const usdValue = ntn ? parseFloat(ntn) : dto!.usdValue;
     return service.quickLong(
       dto!.symbol,
-      dto!.usdValue,
+      usdValue,
       dto!.stopLossPercent,
       dto!.takeProfitPercent,
       dto!.leverage,
@@ -792,13 +794,15 @@ export class TradingController {
   async quickShort(
     @Query('exchange') exchange?: string,
     @Query('tradingType') tradingType?: string,
+    @Query('ntn') ntn?: string,
     @Body() dto?: QuickLongShortDto,
   ) {
     const { exchange: ex, tradingType: tt } = this.getExchangeParams(exchange, tradingType);
     const service = await this.getFuturesTradingService(ex, tt);
+    const usdValue = ntn ? parseFloat(ntn) : dto!.usdValue;
     return service.quickShort(
       dto!.symbol,
-      dto!.usdValue,
+      usdValue,
       dto!.stopLossPercent,
       dto!.takeProfitPercent,
       dto!.leverage,

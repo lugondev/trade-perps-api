@@ -10,7 +10,9 @@ export interface HyperliquidConfig {
 }
 
 export default registerAs('hyperliquid', (): HyperliquidConfig => {
-  const isTestnet = process.env.HYPERLIQUID_TESTNET === 'true';
+  // Support both HYPERLIQUID_IS_TESTNET and HYPERLIQUID_TESTNET for backward compatibility
+  const isTestnet =
+    process.env.HYPERLIQUID_IS_TESTNET === 'true' || process.env.HYPERLIQUID_TESTNET === 'true';
 
   const config: HyperliquidConfig = {
     restUrl:

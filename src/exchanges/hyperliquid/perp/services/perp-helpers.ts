@@ -40,10 +40,15 @@ export function mapTrade(trade: any, symbol?: string): Trade {
 }
 
 export function mapPosition(position: any): Position {
+  // Hyperliquid API returns 'szi' (signed size as string, e.g., "0.1" for long, "-0.1" for short)
+  const szi = parseFloat(position.szi || position.size || position.sz || '0');
+  const size = Math.abs(szi).toString();
+  const side = szi >= 0 ? PositionSide.LONG : PositionSide.SHORT;
+
   return {
     symbol: formatSymbolResponse(position.coin),
-    side: position.side === 'LONG' ? PositionSide.LONG : PositionSide.SHORT,
-    size: position.size ?? position.sz ?? '0',
+    side: side,
+    size: size,
     entryPrice: position.entryPrice ?? position.entryPx ?? '0',
     markPrice: position.markPrice ?? position.markPx,
     liquidationPrice: position.liquidationPrice ?? position.liqPx,

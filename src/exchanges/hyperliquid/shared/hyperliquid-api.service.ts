@@ -141,19 +141,98 @@ export class HyperliquidApiService {
   }
 
   /**
+   * Remove trailing zeros from a number string (matches Hyperliquid SDK requirement)
+   * Hyperliquid API rejects price/size with trailing zeros
+   * Examples: "12345.0" -> "12345", "0.123450" -> "0.12345"
+   */
+  private removeTrailingZeros(value: string): string {
+    if (!value.includes('.')) return value;
+    const normalized = value.replace(/\.?0+$/, '');
+    if (normalized === '-0') return '0';
+    return normalized;
+  }
+
+  /**
+   * Convert number to wire format (string without trailing zeros)
+   * Matches Hyperliquid SDK floatToWire implementation
+   */
+  private floatToWire(x: number): string {
+    const rounded = x.toFixed(8);
+    if (Math.abs(parseFloat(rounded) - x) >= 1e-12) {
+      throw new Error(`floatToWire causes rounding: ${x}`);
+    }
+    return this.removeTrailingZeros(rounded);
+  }
+
+  /**
    * Convert order request to wire format (matches Python SDK)
+   * Per Hyperliquid docs: p (price) and s (size) must be STRINGS without trailing zeros
    */
   private async orderRequestToWire(orderRequest: any): Promise<any> {
     const assetId = await this.getAssetId(orderRequest.coin);
 
-    return {
-      a: assetId,
-      b: orderRequest.is_buy,
-      p: orderRequest.limit_px, // Already formatted as string
-      s: orderRequest.sz, // Already formatted as string
-      r: orderRequest.reduce_only,
-      t: orderRequest.order_type,
+    // Helper to remove trailing zeros from string
+    const removeTrailingZeros = (val: string): string => {
+      if (!val.includes('.')) return val;
+      const normalized = val.replace(/\.?0+$/, '');
+      return normalized === '-0' ? '0' : normalized;
     };
+
+    // Helper to convert to string without trailing zeros
+    const toWireString = (val: any, decimals: number = 8): string | undefined => {
+      if (val === undefined || val === null) return undefined;
+      const n = Number(val);
+      if (Number.isNaN(n)) return undefined;
+      return removeTrailingZeros(n.toFixed(decimals));
+    };
+
+    // Try to get asset info for size decimals
+    let szDecimals = 8; // default
+    try {
+      const info = await this.getAssetInfo(orderRequest.coin);
+      if (info?.szDecimals !== undefined) {
+        szDecimals = info.szDecimals;
+      }
+    } catch (e) {
+      this.logger.debug(
+        `Could not load asset info for ${orderRequest.coin}, using default szDecimals=8`,
+      );
+    }
+
+    // CRITICAL: Key order must match Python SDK for correct msgpack encoding
+    // Order: a, b, p, s (optional for tpsl), r, t, c (if cloid exists)
+    const wireOrder: any = {};
+    wireOrder.a = assetId;
+    wireOrder.b = orderRequest.is_buy;
+    wireOrder.p = toWireString(orderRequest.limit_px, 8);
+
+    // Always include size if provided
+    if (orderRequest.sz !== undefined) {
+      wireOrder.s = toWireString(orderRequest.sz, szDecimals);
+    }
+
+    wireOrder.r = orderRequest.reduce_only;
+
+    // Clean up trigger order format - triggerPx must also have no trailing zeros
+    let orderType = orderRequest.order_type;
+    if (orderType?.trigger?.triggerPx) {
+      orderType = {
+        ...orderType,
+        trigger: {
+          ...orderType.trigger,
+          triggerPx: toWireString(orderType.trigger.triggerPx, 8),
+        },
+      };
+    }
+    wireOrder.t = orderType;
+
+    // Add cloid if present (must be last)
+    if (orderRequest.cloid) {
+      wireOrder.c = orderRequest.cloid;
+    }
+
+    this.logger.debug('Final wire order:', JSON.stringify(wireOrder, null, 2));
+    return wireOrder;
   }
 
   /**
@@ -248,11 +327,12 @@ export class HyperliquidApiService {
     const orderWire = await this.orderRequestToWire(orderRequest);
     this.logger.debug('Order Wire:', JSON.stringify(orderWire, null, 2));
 
-    const action = {
-      type: 'order',
-      orders: [orderWire],
-      grouping: 'na',
-    };
+    // IMPORTANT: Key order matters for msgpack encoding!
+    // Must match Python SDK order: type, orders, grouping
+    const action: any = {};
+    action.type = 'order';
+    action.orders = [orderWire];
+    action.grouping = 'na';
 
     this.logger.debug('Action being sent:', JSON.stringify(action, null, 2));
 
@@ -263,10 +343,10 @@ export class HyperliquidApiService {
    * Cancel order
    */
   async cancelOrder(coin: string, oid: number): Promise<HyperliquidApiResponse> {
-    const action = {
-      type: 'cancel',
-      cancels: [{ coin, oid }],
-    };
+    // IMPORTANT: Key order matters for msgpack encoding!
+    const action: any = {};
+    action.type = 'cancel';
+    action.cancels = [{ a: await this.getAssetId(coin), o: oid }];
 
     return this.postSigned('/exchange', action);
   }
@@ -275,10 +355,10 @@ export class HyperliquidApiService {
    * Cancel all orders for a coin
    */
   async cancelAllOrders(coin?: string): Promise<HyperliquidApiResponse> {
-    const action = {
-      type: 'cancelByCloid',
-      cancels: coin ? [{ coin }] : [],
-    };
+    // IMPORTANT: Key order matters for msgpack encoding!
+    const action: any = {};
+    action.type = 'cancelByCloid';
+    action.cancels = coin ? [{ asset: await this.getAssetId(coin) }] : [];
 
     return this.postSigned('/exchange', action);
   }
@@ -325,16 +405,62 @@ export class HyperliquidApiService {
    * Format API response
    */
   private formatResponse<T>(data: any): HyperliquidApiResponse<T> {
-    // Hyperliquid returns different response formats
-    // Check if it's an error response
-    if (data?.status === 'err' || data?.error) {
+    // Log the raw data first for debugging
+    this.logger.debug('Raw API response:', data);
+
+    // If data is null or undefined, return error
+    if (data === null || data === undefined) {
+      this.logger.warn('Empty or null response from Hyperliquid');
       return {
         success: false,
-        error: data.error || data.response || 'Unknown error',
+        error: 'Empty or null response from Hyperliquid',
         timestamp: Date.now(),
       };
     }
 
+    // Check if it's an error response (common Hyperliquid error formats)
+    if (data?.status === 'err' || data?.error || data?.response === 'error') {
+      this.logger.warn('Error response received from Hyperliquid:', data);
+      return {
+        success: false,
+        error: data.error || data.msg || data.message || data.response || 'Unknown error',
+        timestamp: Date.now(),
+      };
+    }
+
+    // If data is a string, treat it as a plain message or error
+    if (typeof data === 'string') {
+      this.logger.debug('String response received from Hyperliquid:', data);
+      // Could be a success message or error
+      return {
+        success: true,
+        data: data as T,
+        timestamp: Date.now(),
+      };
+    }
+
+    // If data is an array, return it as is (might be a list of orders, fills, etc.)
+    if (Array.isArray(data)) {
+      this.logger.debug('Array response received from Hyperliquid');
+      return {
+        success: true,
+        data: data as T,
+        timestamp: Date.now(),
+      };
+    }
+
+    // If data is an object, check common success indicators
+    if (typeof data === 'object') {
+      // Some Hyperliquid endpoints return different structures
+      this.logger.debug('Object response received from Hyperliquid');
+      return {
+        success: true,
+        data: data as T,
+        timestamp: Date.now(),
+      };
+    }
+
+    // Fallback: return the data as is
     return {
       success: true,
       data: data,
@@ -346,12 +472,52 @@ export class HyperliquidApiService {
    * Handle API errors
    */
   private handleError(error: any): HyperliquidApiResponse {
-    this.logger.error('Hyperliquid API Error:', error.response?.data || error.message);
+    // Log the raw error for debugging
+    // Log the raw error and response body for debugging
+    this.logger.error('Hyperliquid API Error:', error);
+    const respBody = error?.response?.data;
+    if (respBody) {
+      try {
+        this.logger.error('Hyperliquid response body:', JSON.stringify(respBody));
+      } catch (e) {
+        this.logger.error('Hyperliquid response body (raw):', respBody);
+      }
+    }
 
+    // Check if it's a JSON parsing/serialization error
+    if (
+      error.name === 'SyntaxError' ||
+      error.code === 'EBADJSON' ||
+      error.message?.includes('deserialize')
+    ) {
+      const responseText = error.response?.data || 'No response body';
+      this.logger.error('JSON parsing error. Raw response:', responseText);
+      return {
+        success: false,
+        error: `Invalid JSON response from API: ${responseText}`,
+        timestamp: Date.now(),
+      };
+    }
+
+    // Check if response data exists
+    const responseData = error.response?.data;
+    if (!responseData) {
+      // Network error or no response
+      const status = error.response?.status;
+      const statusText = error.response?.statusText;
+      return {
+        success: false,
+        error: `Network error (${status || 'unknown'}): ${statusText || error.message}`,
+        timestamp: Date.now(),
+      };
+    }
+
+    // Try to extract error message from response
     const errorMessage =
-      error.response?.data?.error ||
-      error.response?.data?.msg ||
-      error.response?.data?.message ||
+      responseData.error ||
+      responseData.msg ||
+      responseData.message ||
+      responseData.response ||
       error.message ||
       'Unknown error occurred';
 
