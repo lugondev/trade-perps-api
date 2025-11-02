@@ -1,31 +1,38 @@
-# Perps Vibe AI - Multi-Exchange Trading Bot
+# Perps Vibe AI - Multi-Exchange Perpetual Futures Trading Platform
 
-A sophisticated NestJS-based trading bot with **Unified API Architecture** supporting multiple perpetual futures exchanges including Aster DEX and Hyperliquid.
+A sophisticated NestJS-based trading platform with **Unified API Architecture** supporting multiple perpetual futures exchanges including Aster DEX, Hyperliquid, Binance Futures, and OKX Perpetuals.
 
 ## 🎯 Architecture Highlights
 
-- ✅ **Unified API**: 57 endpoints serving all exchanges (vs 150+ per-exchange endpoints)
-- ✅ **Factory Pattern**: Dynamic service resolution at runtime
-- ✅ **Interface-Driven**: Clean, maintainable, and easily extensible
-- ✅ **Type-Safe**: Full TypeScript with strict mode
-- ✅ **Plug & Play**: Add new exchanges in 10 minutes
+- ✅ **Unified API**: Single set of endpoints serving all exchanges
+- ✅ **Factory Pattern**: Dynamic service resolution at runtime via Exchange Factory
+- ✅ **Interface-Driven**: Clean separation between interfaces and implementations
+- ✅ **Type-Safe**: Full TypeScript with strict mode enabled
+- ✅ **Modular Design**: Each exchange is a self-contained module
+- ✅ **Plug & Play**: Add new exchanges by implementing standard interfaces
 
-## 🚀 Features
+## 🏢 Supported Exchanges
 
-### Core Features
-- ✅ **Multi-Exchange Support**: Aster DEX, Hyperliquid (ready for Binance, OKX, Bybit)
-- ✅ **Unified API**: Single set of endpoints for all exchanges
-- ✅ **Trading Operations**: Market/limit orders, positions, leverage management
-- ✅ **Risk Management**: Stop-loss, take-profit, margin control
-- ✅ **Balance & P&L**: Portfolio tracking, liquidation risk, funding fees
-- ✅ **Market Data**: Real-time prices, orderbook, candles, funding rates
+- ✅ **Aster DEX**: Decentralized perpetual futures (with WebSocket support)
+- ✅ **Hyperliquid**: On-chain perpetual futures (with WebSocket support)
+- ✅ **Binance Futures**: Centralized perpetual futures
+- ✅ **OKX Perpetuals**: Centralized perpetual futures
 
-### Technical Features
-- ✅ **REST API**: Swagger documentation at `/api`
-- ✅ **WebSocket**: Real-time updates (Aster, Hyperliquid)
-- ✅ **Authentication**: API Key guard + Public endpoints
-- ✅ **Error Handling**: Standardized ApiResponse format
-- ✅ **Clean Architecture**: Easy to test, maintain, extend
+## 💡 Core Features
+
+- ✅ **Trading Operations**: Market/limit orders, position management, leverage control
+- ✅ **Risk Management**: Stop-loss, take-profit, margin management
+- ✅ **Balance & Portfolio**: Real-time balance tracking, P&L calculation, portfolio value
+- ✅ **Market Data**: Real-time prices, orderbook depth, historical candles, funding rates
+- ✅ **Symbol Normalization**: Automatic symbol format conversion across exchanges
+
+## 🔧 Technical Features
+
+- ✅ **REST API**: Comprehensive Swagger documentation at `/api`
+- ✅ **WebSocket Support**: Real-time market data and account updates
+- ✅ **Authentication**: API Key guard for secure access
+- ✅ **Error Handling**: Standardized error responses
+- ✅ **Clean Architecture**: Modular, testable, maintainable codebase
 
 ## 📦 Quick Start
 
@@ -38,36 +45,49 @@ pnpm install
 
 ### 2. Configuration
 
-Update the `.env` file with your exchange API credentials:
+Create a `.env` file in the root directory with your exchange API credentials:
 
 ```env
-# Aster DEX API Configuration
-ASTER_API_KEY=your_api_key_here
-ASTER_API_SECRET=your_api_secret_here
-ASTER_USER_ADDRESS=your_main_wallet_address
-ASTER_SIGNER_ADDRESS=your_signer_wallet_address
-ASTER_PRIVATE_KEY=your_private_key_here
-ASTER_REST_URL=https://fapi.asterdex.com
-ASTER_WS_URL=wss://fstream.asterdex.com
-
-# Hyperliquid API Configuration
-HYPERLIQUID_REST_URL=https://api.hyperliquid.xyz
-HYPERLIQUID_WS_URL=wss://api.hyperliquid.xyz/ws
-HYPERLIQUID_WALLET_ADDRESS=your_wallet_address_here
-HYPERLIQUID_PRIVATE_KEY=your_hyperliquid_private_key_here
-HYPERLIQUID_TESTNET=false
-
-# Application settings
+# Application Settings
 NODE_ENV=development
 PORT=3000
 LOG_LEVEL=debug
 
-# API Access Control (IMPORTANT!)
-# This key is required to access protected endpoints
+# API Access Control (REQUIRED!)
+# This key protects all endpoints
 API_KEY_ACCESS=your_secure_api_key_here
+
+# Aster DEX Configuration
+ASTER_API_KEY=your_aster_api_key
+ASTER_API_SECRET=your_aster_api_secret
+ASTER_USER_ADDRESS=your_wallet_address
+ASTER_SIGNER_ADDRESS=your_signer_address
+ASTER_PRIVATE_KEY=your_private_key
+ASTER_REST_URL=https://fapi.asterdex.com
+ASTER_WS_URL=wss://fstream.asterdex.com
+
+# Hyperliquid Configuration
+HYPERLIQUID_REST_URL=https://api.hyperliquid.xyz
+HYPERLIQUID_WS_URL=wss://api.hyperliquid.xyz/ws
+HYPERLIQUID_WALLET_ADDRESS=your_wallet_address
+HYPERLIQUID_PRIVATE_KEY=your_private_key
+HYPERLIQUID_TESTNET=false
+
+# Binance Futures Configuration (Optional)
+BINANCE_API_KEY=your_binance_api_key
+BINANCE_API_SECRET=your_binance_api_secret
+BINANCE_REST_URL=https://fapi.binance.com
+BINANCE_TESTNET=false
+
+# OKX Perpetuals Configuration (Optional)
+OKX_API_KEY=your_okx_api_key
+OKX_API_SECRET=your_okx_api_secret
+OKX_PASSPHRASE=your_okx_passphrase
+OKX_REST_URL=https://www.okx.com
+OKX_TESTNET=false
 ```
 
-**Security Note:** The `API_KEY_ACCESS` is required in the `X-API-Key` header for all requests to protected endpoints. See [API Key Authentication](.docs/api-key-authentication.md) for details.
+**Security Note:** The `API_KEY_ACCESS` is required in the `X-API-Key` header for all requests to protected endpoints.
 
 ### 3. Start the Application
 
@@ -85,9 +105,9 @@ The application will be available at:
 - **API**: <http://localhost:3000>
 - **Swagger Documentation**: <http://localhost:3000/api>
 
-## Authentication
+## 🔐 API Authentication
 
-All endpoints under `/aster/*` and `/hyperliquid/*` are protected with API key authentication.
+All trading endpoints require API key authentication using the `X-API-Key` header.
 
 **Required Header:**
 
@@ -97,227 +117,111 @@ X-API-Key: your_api_key_access_here
 
 ### Using Swagger UI
 
-Swagger UI has built-in API key authentication:
-
 1. Open <http://localhost:3000/api>
-2. Click the **"Authorize"** button (lock icon)
-3. Enter your API key from `.env` file
+2. Click the **"Authorize"** button (lock icon) at the top
+3. Enter your `API_KEY_ACCESS` from `.env` file
 4. Click **"Authorize"** and **"Close"**
-5. Now you can test all protected endpoints
-
-For detailed Swagger guide, see:
-
-- [English Guide](.docs/swagger-authentication-guide-en.md)
-- [Vietnamese Guide](.docs/swagger-authentication-guide-vi.md)
+5. Now you can test all endpoints directly in the browser
 
 ### Using curl
 
-**Example with curl:**
-
 ```bash
-curl -H "X-API-Key: your_api_key_access_here" http://localhost:3000/aster/balance
+curl -H "X-API-Key: your_api_key_access_here" \
+  http://localhost:3000/balance?exchange=aster
 ```
 
-### Using Code
+## 📡 Unified API Endpoints
 
-For detailed authentication documentation and code examples, see [API Key Authentication](.docs/api-key-authentication.md).
-
-## API Endpoints
-
-**Note:** All endpoints below require the `X-API-Key` header.
+All endpoints follow a unified pattern: `/{resource}?exchange={exchange_name}`
 
 ### Balance Endpoints
 
-- `GET /aster/balance` - Get all account balances
-- `GET /aster/balance/:asset` - Get balance for specific asset
-- `GET /aster/balance/non-zero` - Get non-zero balances only
-- `GET /aster/portfolio/value` - Get total portfolio value
+- `GET /balance?exchange={exchange}` - Get account balance and positions
+- `GET /balance/portfolio?exchange={exchange}` - Get portfolio summary
+- `GET /balance/positions?exchange={exchange}` - Get all open positions
+- `GET /balance/position?exchange={exchange}&symbol={symbol}` - Get specific position
+
+**Example:**
+
+```bash
+# Get Aster balance
+curl -H "X-API-Key: your_key" \
+  "http://localhost:3000/balance?exchange=aster"
+
+# Get Hyperliquid positions
+curl -H "X-API-Key: your_key" \
+  "http://localhost:3000/balance/positions?exchange=hyperliquid"
+```
+
+### Market Data Endpoints
+
+- `GET /market/symbols?exchange={exchange}` - Get all tradable symbols
+- `GET /market/ticker?exchange={exchange}&symbol={symbol}` - Get 24hr ticker
+- `GET /market/orderbook?exchange={exchange}&symbol={symbol}` - Get order book
+- `GET /market/trades?exchange={exchange}&symbol={symbol}` - Get recent trades
+- `GET /market/candles?exchange={exchange}&symbol={symbol}&interval={interval}` - Get klines/candles
+- `GET /market/funding?exchange={exchange}&symbol={symbol}` - Get funding rate history
+
+**Example:**
+
+```bash
+# Get BTC ticker from Binance
+curl -H "X-API-Key: your_key" \
+  "http://localhost:3000/market/ticker?exchange=binance&symbol=BTC-USDT"
+
+# Get ETH orderbook from Hyperliquid
+curl -H "X-API-Key: your_key" \
+  "http://localhost:3000/market/orderbook?exchange=hyperliquid&symbol=ETH-USD"
+```
 
 ### Trading Endpoints
 
-- `POST /aster/orders` - Place a new order
-- `DELETE /aster/orders/:orderId` - Cancel an order
-- `GET /aster/orders/:orderId` - Get order details
-- `GET /aster/orders/open` - Get all open orders
-- `DELETE /aster/orders` - Cancel all open orders
+- `POST /trading/order/market` - Place market order
+- `POST /trading/order/limit` - Place limit order
+- `POST /trading/order/cancel` - Cancel order
+- `POST /trading/order/cancel-all` - Cancel all orders
+- `GET /trading/orders?exchange={exchange}` - Get open orders
+- `POST /trading/leverage` - Set leverage
+- `POST /trading/position/close` - Close position
 
-#### Quick Trading Endpoints
-
-- `POST /aster/orders/market-buy` - Place market buy order
-- `POST /aster/orders/market-sell` - Place market sell order
-- `POST /aster/orders/limit-buy` - Place limit buy order
-- `POST /aster/orders/limit-sell` - Place limit sell order
-
-### History Endpoints
-
-- `GET /aster/history/trades` - Get trade history with pagination
-- `GET /aster/history/orders` - Get order history with pagination
-- `GET /aster/history/trades/:symbol/recent` - Get recent trades for symbol
-- `GET /aster/stats/:symbol` - Get trading statistics for symbol
-- `GET /aster/pnl` - Get P&L report
-- `GET /aster/export/trades` - Export trade history as CSV
-
-### WebSocket Endpoints
-
-- `POST /aster/websocket/connect` - Connect to WebSocket
-- `POST /aster/websocket/disconnect` - Disconnect from WebSocket
-- `POST /aster/websocket/subscribe/ticker/:symbol` - Subscribe to ticker updates
-- `POST /aster/websocket/subscribe/orderbook/:symbol` - Subscribe to order book updates
-- `GET /aster/websocket/status` - Get WebSocket connection status
-
-## Usage Examples
-
-### Check Account Balances
+**Market Order Example:**
 
 ```bash
-# Get all balances
-curl http://localhost:3000/aster/balance
-
-# Get BTC balance
-curl http://localhost:3000/aster/balance/BTC
-
-# Get non-zero balances
-curl http://localhost:3000/aster/balance/non-zero
-```
-
-### Place Orders
-
-```bash
-# Market buy order
-curl -X POST http://localhost:3000/aster/orders/market-buy \
+curl -X POST -H "X-API-Key: your_key" \
   -H "Content-Type: application/json" \
+  "http://localhost:3000/trading/order/market" \
   -d '{
-    "symbol": "BTCUSDT",
-    "quantity": "0.001"
-  }'
-
-# Limit sell order
-curl -X POST http://localhost:3000/aster/orders/limit-sell \
-  -H "Content-Type: application/json" \
-  -d '{
-    "symbol": "BTCUSDT",
-    "quantity": "0.001",
-    "price": "45000.00"
+    "exchange": "aster",
+    "symbol": "BTC-USDT",
+    "side": "BUY",
+    "quantity": 0.001
   }'
 ```
 
-### Get Trading History
+**Limit Order Example:**
 
 ```bash
-# Get trade history
-curl "http://localhost:3000/aster/history/trades?symbol=BTCUSDT&limit=50"
-
-# Get P&L report for last 30 days
-curl "http://localhost:3000/aster/pnl?days=30"
-
-# Get trading statistics
-curl http://localhost:3000/aster/stats/BTCUSDT
-```
-
-### WebSocket Integration
-
-```bash
-# Connect to WebSocket
-curl -X POST http://localhost:3000/aster/websocket/connect
-
-# Subscribe to ticker updates
-curl -X POST http://localhost:3000/aster/websocket/subscribe/ticker/BTCUSDT
-
-# Subscribe to order book
-curl -X POST http://localhost:3000/aster/websocket/subscribe/orderbook/BTCUSDT
-```
-
-## Hyperliquid API Endpoints
-
-All Hyperliquid endpoints require the `X-API-Key` header.
-
-### Balance & Portfolio
-
-- `GET /hyperliquid/balance` - Get account balance and positions
-- `GET /hyperliquid/portfolio` - Get portfolio summary
-- `GET /hyperliquid/positions` - Get all open positions
-- `GET /hyperliquid/position/:coin` - Get position for specific coin (e.g., BTC, ETH)
-
-### Trading
-
-- `POST /hyperliquid/order/market` - Place market order
-- `POST /hyperliquid/order/limit` - Place limit order
-- `POST /hyperliquid/order/cancel` - Cancel specific order
-- `POST /hyperliquid/order/cancel-all` - Cancel all orders
-- `GET /hyperliquid/orders` - Get open orders
-- `POST /hyperliquid/leverage` - Set leverage for a coin
-
-### Advanced Trading
-
-- `POST /hyperliquid/quick-long` - Quick long position with SL/TP
-- `POST /hyperliquid/quick-short` - Quick short position with SL/TP
-- `POST /hyperliquid/close-position` - Close position (full or partial)
-- `POST /hyperliquid/close-all-positions` - Close all open positions
-
-### Market Data
-
-- `GET /hyperliquid/meta` - Get exchange metadata
-- `GET /hyperliquid/symbols` - Get all available symbols
-- `GET /hyperliquid/orderbook/:coin` - Get order book
-- `GET /hyperliquid/trades/:coin` - Get recent trades
-- `GET /hyperliquid/price/:coin` - Get current price
-- `GET /hyperliquid/prices` - Get all current prices
-- `GET /hyperliquid/candles/:coin` - Get candles/klines
-- `GET /hyperliquid/funding/:coin` - Get funding history
-- `GET /hyperliquid/ticker/:coin` - Get 24hr ticker stats
-
-### History & Analytics
-
-- `GET /hyperliquid/history/trades` - Get trade history
-- `GET /hyperliquid/history/recent-trades` - Get recent trades (last N days)
-- `GET /hyperliquid/history/pnl` - Get P&L statistics
-- `GET /hyperliquid/history/stats-by-coin` - Get trading stats by coin
-
-### Hyperliquid Usage Examples
-
-**Quick Long Position:**
-
-```bash
-curl -X POST http://localhost:3000/hyperliquid/quick-long \
+curl -X POST -H "X-API-Key: your_key" \
   -H "Content-Type: application/json" \
-  -H "X-API-Key: your_api_key" \
+  "http://localhost:3000/trading/order/limit" \
   -d '{
-    "coin": "BTC",
-    "usdValue": 100,
-    "stopLossPercent": 5,
-    "takeProfitPercent": 10,
-    "leverage": 5
+    "exchange": "hyperliquid",
+    "symbol": "ETH-USD",
+    "side": "SELL",
+    "quantity": 0.1,
+    "price": 3500
   }'
 ```
 
-**Get Portfolio:**
+**Close Position Example:**
 
 ```bash
-curl -H "X-API-Key: your_api_key" \
-  http://localhost:3000/hyperliquid/portfolio
-```
-
-**Place Market Order:**
-
-```bash
-curl -X POST http://localhost:3000/hyperliquid/order/market \
+curl -X POST -H "X-API-Key: your_key" \
   -H "Content-Type: application/json" \
-  -H "X-API-Key: your_api_key" \
+  "http://localhost:3000/trading/position/close" \
   -d '{
-    "coin": "ETH",
-    "isBuy": true,
-    "size": 0.1
-  }'
-```
-
-**Close Position:**
-
-```bash
-curl -X POST http://localhost:3000/hyperliquid/close-position \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: your_api_key" \
-  -d '{
-    "coin": "BTC"
+    "exchange": "binance",
+    "symbol": "BTC-USDT"
   }'
 ```
 
@@ -362,15 +266,15 @@ src/
 
 ### Environment Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `ASTER_API_KEY` | Your Aster DEX API key | Required |
-| `ASTER_API_SECRET` | Your Aster DEX API secret | Required |
-| `ASTER_REST_URL` | Aster REST API base URL | `https://api.asterdex.com` |
-| `ASTER_WS_URL` | Aster WebSocket URL | `wss://ws.asterdex.com` |
-| `NODE_ENV` | Environment (development/production) | `development` |
-| `PORT` | Application port | `3000` |
-| `LOG_LEVEL` | Logging level | `debug` |
+| Variable           | Description                          | Default                    |
+| ------------------ | ------------------------------------ | -------------------------- |
+| `ASTER_API_KEY`    | Your Aster DEX API key               | Required                   |
+| `ASTER_API_SECRET` | Your Aster DEX API secret            | Required                   |
+| `ASTER_REST_URL`   | Aster REST API base URL              | `https://api.asterdex.com` |
+| `ASTER_WS_URL`     | Aster WebSocket URL                  | `wss://ws.asterdex.com`    |
+| `NODE_ENV`         | Environment (development/production) | `development`              |
+| `PORT`             | Application port                     | `3000`                     |
+| `LOG_LEVEL`        | Logging level                        | `debug`                    |
 
 ### API Authentication
 

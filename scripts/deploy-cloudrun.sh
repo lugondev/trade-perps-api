@@ -25,7 +25,7 @@ elif [ "$ENVIRONMENT" = "staging" ]; then
         echo "Available staging accounts:"
         echo "  - acc1: 0xaC00F8BF465f863c0eeD01185F8A0D400ae632dA"
         echo "  - acc2: 0xe2d3C51d70093cb2E1C7B16b7Ed10C2EB630AF1a"
-        echo "  - 8659:     0x7AFabDfBeaaFB461Df17E33d6A3E61D83Fed8659"
+        echo "  - acc3: 0x7AFabDfBeaaFB461Df17E33d6A3E61D83Fed8659"
         exit 1
     fi
     
