@@ -26,8 +26,8 @@ export class SymbolNormalizerService {
         return `${normalized.base}-${normalized.quote}-SWAP`;
 
       case 'aster':
-        // Aster: PERP_BTC_USDC
-        return `PERP_${normalized.base}_${normalized.quote}`;
+        // Aster: BTCUSDT (same format as Binance)
+        return `${normalized.base}${normalized.quote}`;
 
       case 'hyperliquid':
         // Hyperliquid: BTC
@@ -79,7 +79,20 @@ export class SymbolNormalizerService {
         break;
       }
 
-      case 'aster':
+      case 'aster': {
+        // BTCUSDT -> BTC/USDT (same format as Binance)
+        if (symbol.includes('USDT')) {
+          base = symbol.replace('USDT', '');
+          quote = 'USDT';
+        } else if (symbol.includes('USDC')) {
+          base = symbol.replace('USDC', '');
+          quote = 'USDC';
+        } else {
+          return symbol;
+        }
+        break;
+      }
+
       case 'orderly': {
         // PERP_BTC_USDC -> BTC/USDC
         const asterParts = symbol.split('_');

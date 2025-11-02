@@ -225,85 +225,232 @@ curl -X POST -H "X-API-Key: your_key" \
   }'
 ```
 
-## Project Structure
+## 🏗️ Project Structure
 
 ```text
 src/
-├── aster/                    # Aster DEX integration
-│   ├── controllers/          # REST API controllers
-│   ├── services/             # Business logic services
-│   │   ├── aster-api.service.ts
-│   │   ├── balance.service.ts
-│   │   ├── trading.service.ts
-│   │   ├── history.service.ts
-│   │   ├── market-data.service.ts
-│   │   └── aster-websocket.service.ts
-│   ├── types/                # TypeScript type definitions
-│   └── aster.module.ts       # Module configuration
-├── hyperliquid/              # Hyperliquid integration
-│   ├── controllers/          # REST API controllers
-│   ├── services/             # Business logic services
-│   │   ├── hyperliquid-api.service.ts
-│   │   ├── balance.service.ts
-│   │   ├── trading.service.ts
-│   │   ├── history.service.ts
-│   │   └── market-data.service.ts
-│   ├── types/                # TypeScript type definitions
-│   └── hyperliquid.module.ts # Module configuration
-├── common/                   # Shared utilities
-│   ├── decorators/           # Custom decorators
-│   └── guards/               # Authentication guards
-├── config/                   # Configuration files
-│   ├── app.config.ts
-│   ├── aster.config.ts
-│   ├── hyperliquid.config.ts
-│   └── trading.config.ts
-├── app.module.ts             # Main application module
-└── main.ts                   # Application entry point
+├── api/                          # Unified API Layer
+│   ├── controllers/              # REST API Controllers
+│   │   ├── balance.controller.ts    # Balance & portfolio endpoints
+│   │   ├── market.controller.ts     # Market data endpoints
+│   │   └── trading.controller.ts    # Trading endpoints
+│   └── api.module.ts             # API module configuration
+│
+├── common/                       # Shared Utilities
+│   ├── decorators/               # Custom decorators
+│   │   ├── api-key.decorator.ts     # API key extraction
+│   │   └── public.decorator.ts      # Public endpoint marker
+│   ├── dto/                      # Data Transfer Objects
+│   │   ├── exchange.dto.ts          # Exchange selection DTOs
+│   │   └── trading.dto.ts           # Trading operation DTOs
+│   ├── factory/                  # Factory Pattern
+│   │   └── exchange.factory.ts      # Dynamic service resolution
+│   ├── guards/                   # Authentication Guards
+│   │   └── api-key.guard.ts         # API key validation
+│   ├── interfaces/               # Standard Interfaces
+│   │   ├── balance.interface.ts     # Balance operations
+│   │   ├── market.interface.ts      # Market data operations
+│   │   └── trading.interface.ts     # Trading operations
+│   ├── middleware/               # HTTP Middleware
+│   │   └── symbol-normalizer.middleware.ts  # Symbol format conversion
+│   ├── services/                 # Common Services
+│   │   └── symbol-normalizer.service.ts     # Symbol normalization logic
+│   └── types/                    # Type Definitions
+│       └── exchange.types.ts        # Exchange enums and types
+│
+├── exchanges/                    # Exchange Integrations
+│   ├── aster/                    # Aster DEX
+│   │   ├── perpetual/
+│   │   │   ├── services/
+│   │   │   │   ├── perpetual-balance.service.ts
+│   │   │   │   ├── perpetual-market.service.ts
+│   │   │   │   └── perpetual-trading.service.ts
+│   │   │   └── perpetual.module.ts
+│   │   ├── shared/
+│   │   │   ├── aster-api.service.ts      # REST API client
+│   │   │   └── aster-websocket.service.ts # WebSocket client
+│   │   ├── types/                         # Type definitions
+│   │   └── aster.module.ts
+│   │
+│   ├── hyperliquid/              # Hyperliquid
+│   │   ├── perp/
+│   │   │   ├── services/
+│   │   │   │   ├── balance.service.ts
+│   │   │   │   ├── market-data.service.ts
+│   │   │   │   ├── order-management.service.ts
+│   │   │   │   └── order-placement.service.ts
+│   │   │   └── perp.module.ts
+│   │   ├── shared/
+│   │   │   ├── hyperliquid-api.service.ts # REST API client
+│   │   │   └── signing.service.ts         # Signature generation
+│   │   ├── types/
+│   │   └── hyperliquid.module.ts
+│   │
+│   ├── binance/                  # Binance Futures
+│   │   ├── perpetual/
+│   │   │   ├── services/
+│   │   │   │   ├── perpetual-balance.service.ts
+│   │   │   │   ├── perpetual-market.service.ts
+│   │   │   │   └── perpetual-trading.service.ts
+│   │   │   └── perpetual.module.ts
+│   │   ├── shared/
+│   │   │   └── binance-api.service.ts
+│   │   ├── types/
+│   │   └── binance.module.ts
+│   │
+│   ├── okx/                      # OKX Perpetuals
+│   │   ├── perpetual/
+│   │   │   ├── services/
+│   │   │   │   ├── perpetual-balance.service.ts
+│   │   │   │   ├── perpetual-market.service.ts
+│   │   │   │   └── perpetual-trading.service.ts
+│   │   │   └── perpetual.module.ts
+│   │   ├── shared/
+│   │   │   └── okx-api.service.ts
+│   │   ├── types/
+│   │   └── okx.module.ts
+│   │
+│   └── exchanges.module.ts       # Exchanges module aggregator
+│
+├── config/                       # Configuration Files
+│   ├── app.config.ts             # App settings
+│   ├── aster.config.ts           # Aster configuration
+│   ├── binance.config.ts         # Binance configuration
+│   ├── hyperliquid.config.ts     # Hyperliquid configuration
+│   ├── okx.config.ts             # OKX configuration
+│   └── trading.config.ts         # Trading settings
+│
+├── app.module.ts                 # Root module
+└── main.ts                       # Application entry point
 ```
 
-## Configuration
+## 🔌 Architecture Overview
+
+### Unified API Pattern
+
+Instead of separate endpoints per exchange, we use a unified pattern:
+
+```text
+Traditional Approach (Bad):
+- /aster/balance
+- /hyperliquid/balance
+- /binance/balance
+- /okx/balance
+→ 4 exchanges × 50 operations = 200 endpoints!
+
+Unified Approach (Good):
+- /balance?exchange=aster
+- /balance?exchange=hyperliquid
+- /balance?exchange=binance
+- /balance?exchange=okx
+→ 50 endpoints serving all exchanges
+```
+
+### Exchange Factory Pattern
+
+The `ExchangeFactory` dynamically resolves the correct service based on the exchange parameter:
+
+```typescript
+// Client request
+GET /balance?exchange=aster
+
+// Factory resolves
+ExchangeFactory → AsterPerpetualBalanceService → Execute
+
+// Client request
+GET /balance?exchange=hyperliquid
+
+// Factory resolves
+ExchangeFactory → HyperliquidBalanceService → Execute
+```
+
+### Interface-Driven Design
+
+All exchange implementations follow standard interfaces:
+
+- `IBalanceService`: Balance and portfolio operations
+- `IMarketDataService`: Market data operations
+- `ITradingService`: Trading operations
+
+This ensures:
+
+- **Consistency**: All exchanges work the same way
+- **Testability**: Easy to mock and test
+- **Maintainability**: Changes in one place affect all exchanges
+- **Extensibility**: New exchanges just implement interfaces
+
+### Symbol Normalization
+
+Each exchange uses different symbol formats:
+
+- Aster: `BTCUSDT`
+- Hyperliquid: `BTC`
+- Binance: `BTCUSDT`
+- OKX: `BTC-USDT-SWAP`
+
+The `SymbolNormalizerMiddleware` automatically converts symbols:
+
+```text
+Client → "BTC-USDT" → Middleware → "BTCUSDT" (Aster)
+Client → "BTC-USDT" → Middleware → "BTC" (Hyperliquid)
+Client → "BTC-USDT" → Middleware → "BTC-USDT-SWAP" (OKX)
+```
+
+## ⚙️ Configuration
 
 ### Environment Variables
 
-| Variable           | Description                          | Default                    |
-| ------------------ | ------------------------------------ | -------------------------- |
-| `ASTER_API_KEY`    | Your Aster DEX API key               | Required                   |
-| `ASTER_API_SECRET` | Your Aster DEX API secret            | Required                   |
-| `ASTER_REST_URL`   | Aster REST API base URL              | `https://api.asterdex.com` |
-| `ASTER_WS_URL`     | Aster WebSocket URL                  | `wss://ws.asterdex.com`    |
-| `NODE_ENV`         | Environment (development/production) | `development`              |
-| `PORT`             | Application port                     | `3000`                     |
-| `LOG_LEVEL`        | Logging level                        | `debug`                    |
+| Variable         | Description                         | Required | Default       |
+| ---------------- | ----------------------------------- | -------- | ------------- |
+| `API_KEY_ACCESS` | API key for endpoint authentication | Yes      | -             |
+| `PORT`           | Application port                    | No       | `3000`        |
+| `NODE_ENV`       | Environment mode                    | No       | `development` |
+| `LOG_LEVEL`      | Logging level                       | No       | `debug`       |
 
-### API Authentication
+**Aster DEX:**
 
-The bot uses HMAC SHA256 signature authentication:
+| Variable               | Description      | Required |
+| ---------------------- | ---------------- | -------- |
+| `ASTER_API_KEY`        | Aster API key    | Yes      |
+| `ASTER_API_SECRET`     | Aster API secret | Yes      |
+| `ASTER_USER_ADDRESS`   | Wallet address   | Yes      |
+| `ASTER_SIGNER_ADDRESS` | Signer address   | Yes      |
+| `ASTER_PRIVATE_KEY`    | Private key      | Yes      |
+| `ASTER_REST_URL`       | REST API URL     | No       |
+| `ASTER_WS_URL`         | WebSocket URL    | No       |
 
-1. Combines HTTP method, path, query string, body, and timestamp
-2. Signs with your API secret using HMAC SHA256
-3. Includes signature in `X-SIGNATURE` header
+**Hyperliquid:**
 
-## Error Handling
+| Variable                     | Description    | Required |
+| ---------------------------- | -------------- | -------- |
+| `HYPERLIQUID_WALLET_ADDRESS` | Wallet address | Yes      |
+| `HYPERLIQUID_PRIVATE_KEY`    | Private key    | Yes      |
+| `HYPERLIQUID_REST_URL`       | REST API URL   | No       |
+| `HYPERLIQUID_WS_URL`         | WebSocket URL  | No       |
+| `HYPERLIQUID_TESTNET`        | Use testnet    | No       |
 
-The application includes comprehensive error handling:
+**Binance Futures:**
 
-- **Network Errors**: Automatic retry with exponential backoff
-- **API Errors**: Structured error responses with error codes
-- **Validation Errors**: Input validation with detailed error messages
-- **WebSocket Errors**: Automatic reconnection with subscription restoration
+| Variable             | Description        | Required |
+| -------------------- | ------------------ | -------- |
+| `BINANCE_API_KEY`    | Binance API key    | Yes      |
+| `BINANCE_API_SECRET` | Binance API secret | Yes      |
+| `BINANCE_REST_URL`   | REST API URL       | No       |
+| `BINANCE_TESTNET`    | Use testnet        | No       |
 
-## Security Features
+**OKX Perpetuals:**
 
-- **Environment Variables**: Sensitive data stored in environment variables
-- **HMAC Authentication**: Secure API authentication with signatures
-- **Input Validation**: Comprehensive input validation and sanitization
-- **Rate Limiting**: Built-in protection against API rate limits
-- **Error Sanitization**: Sensitive information removed from error logs
+| Variable         | Description    | Required |
+| ---------------- | -------------- | -------- |
+| `OKX_API_KEY`    | OKX API key    | Yes      |
+| `OKX_API_SECRET` | OKX API secret | Yes      |
+| `OKX_PASSPHRASE` | OKX passphrase | Yes      |
+| `OKX_REST_URL`   | REST API URL   | No       |
+| `OKX_TESTNET`    | Use testnet    | No       |
 
-## Development
+## 🧪 Development
 
-### Scripts
+### Available Scripts
 
 ```bash
 # Development
@@ -315,57 +462,197 @@ pnpm start:prod         # Start production build
 pnpm test               # Run unit tests
 pnpm test:watch         # Run tests in watch mode
 pnpm test:cov           # Generate coverage report
+pnpm test:e2e           # Run end-to-end tests
 
 # Code Quality
 pnpm lint               # Run ESLint
 pnpm format             # Format code with Prettier
 ```
 
-### Adding New Features
+### Adding a New Exchange
 
-1. Create new service in `src/aster/services/`
-2. Add types to `src/aster/types/index.ts`
-3. Update controller in `src/aster/controllers/`
-4. Add to module exports in `src/aster/aster.module.ts`
+To add support for a new exchange:
 
-## Monitoring & Logging
+1. **Create exchange module structure:**
 
-The application uses structured logging with different levels:
+   ```bash
+   mkdir -p src/exchanges/newexchange/perpetual/services
+   mkdir -p src/exchanges/newexchange/shared
+   mkdir -p src/exchanges/newexchange/types
+   ```
 
-- **Error**: System errors and failures
+2. **Implement standard interfaces:**
+
+   Create services implementing:
+   - `IBalanceService` (balance operations)
+   - `IMarketDataService` (market data)
+   - `ITradingService` (trading operations)
+
+3. **Create API service:**
+
+   Implement REST API client in `shared/newexchange-api.service.ts`
+
+4. **Define types:**
+
+   Add exchange-specific types in `types/index.ts`
+
+5. **Create configuration:**
+
+   Add config in `src/config/newexchange.config.ts`
+
+6. **Register in factory:**
+
+   Add exchange to `ExchangeFactory` resolution logic
+
+7. **Update exchange enum:**
+
+   Add to `ExchangeName` enum in `common/types/exchange.types.ts`
+
+8. **Test thoroughly:**
+
+   Create unit tests for all services
+
+## 🔒 Security Features
+
+- **Environment Variables**: Sensitive data stored securely in `.env`
+- **API Key Authentication**: All endpoints protected with API key guard
+- **HMAC Signatures**: Secure API authentication for supported exchanges
+- **Input Validation**: Comprehensive validation using class-validator
+- **Rate Limiting**: Built-in protection against API rate limits
+- **Error Sanitization**: Sensitive information removed from logs
+
+## 📊 Monitoring & Logging
+
+The application uses structured logging with contextual information:
+
+- **Error**: System errors and critical failures
 - **Warn**: Non-critical issues and warnings
 - **Info**: General application information
-- **Debug**: Detailed debugging information
+- **Debug**: Detailed debugging information (set `LOG_LEVEL=debug`)
 
-Logs include contextual information like request IDs, user sessions, and operation metadata.
+Logs include request IDs, exchange names, and operation metadata for easy troubleshooting.
 
-## Troubleshooting
+## 🐛 Troubleshooting
 
 ### Common Issues
 
-1. **Connection Failed**: Check API credentials and network connectivity
-2. **Invalid Signature**: Verify API secret and timestamp synchronization
-3. **Rate Limited**: Implement exponential backoff and reduce request frequency
-4. **WebSocket Disconnects**: Check network stability and firewall settings
+**Connection Failed:**
+
+- Verify API credentials in `.env` file
+- Check network connectivity
+- Ensure exchange API is accessible
+
+**Invalid Signature:**
+
+- Verify API secret is correct
+- Check system time synchronization
+- Ensure timestamp is within acceptable range
+
+**Rate Limited:**
+
+- Reduce request frequency
+- Implement exponential backoff
+- Check exchange rate limit documentation
+
+**Symbol Not Found:**
+
+- Verify symbol format for the specific exchange
+- Check if symbol is supported by the exchange
+- Use `/market/symbols` endpoint to list available symbols
 
 ### Debug Mode
 
-Enable debug logging by setting `LOG_LEVEL=debug` in your `.env` file.
+Enable detailed logging:
 
-## Support
+```bash
+LOG_LEVEL=debug pnpm start:dev
+```
 
-For issues and questions:
+## 📝 API Response Format
 
-1. Check the [Swagger documentation](http://localhost:3000/api) for API details
-2. Review logs for error messages and debugging information
-3. Verify API credentials and network connectivity
+All API responses follow a standardized format:
 
-## License
+**Success Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    // Response data here
+  },
+  "timestamp": "2024-01-01T00:00:00.000Z"
+}
+```
+
+**Error Response:**
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "ERROR_CODE",
+    "message": "Error description",
+    "details": {}
+  },
+  "timestamp": "2024-01-01T00:00:00.000Z"
+}
+```
+
+## 🚀 Deployment
+
+### Docker Deployment
+
+```bash
+# Build image
+docker build -t perps-vibe-ai .
+
+# Run container
+docker run -d \
+  --name perps-vibe-ai \
+  -p 3000:3000 \
+  --env-file .env \
+  perps-vibe-ai
+```
+
+### Cloud Run Deployment
+
+```bash
+# Deploy to Google Cloud Run
+./scripts/deploy-cloudrun.sh
+```
+
+## 📚 Documentation
+
+For detailed documentation, see the `.docs` folder:
+
+- Architecture guides
+- API authentication details
+- Exchange-specific documentation
+- Trading strategies
+- WebSocket integration guides
+
+## 🤝 Contributing
+
+Contributions are welcome! Please:
+
+1. Fork the repository
+2. Create a feature branch
+3. Implement your changes
+4. Add tests for new features
+5. Submit a pull request
+
+## 📄 License
 
 MIT License - see LICENSE file for details.
 
----
+## ⚠️ Disclaimer
 
----
+**Important:** This is a trading platform that can place real orders and spend real money. Always:
 
-**⚠️ Important**: This is a trading bot that can place real orders and spend real money. Always test thoroughly in a development environment before using with real funds. Use at your own risk.
+- Test thoroughly in testnet/sandbox environments
+- Start with small amounts
+- Implement proper risk management
+- Monitor positions actively
+- Use at your own risk
+
+The developers are not responsible for any financial losses incurred while using this platform.
