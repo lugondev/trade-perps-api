@@ -1,11 +1,11 @@
-import { Controller, Get, Query, Param, Logger } from '@nestjs/common';
+import { Controller, Get, Post, Body, Query, Param, Logger } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { ApiKeyAuth } from '../../common/decorators/api-key.decorator';
 import { ExchangeServiceFactory } from '../../common/factory/exchange.factory';
 import { ExchangeName, TradingType } from '../../common/types/exchange.types';
 import { IPerpetualBalanceService } from '../../common/interfaces';
 
-@ApiTags('� Balance API')
+@ApiTags('Balance API')
 @ApiKeyAuth()
 @Controller('api/balance')
 export class BalanceController {
@@ -37,6 +37,32 @@ export class BalanceController {
   }
 
   /**
+   * Get account configuration (OKX only)
+   */
+  @Get('config')
+  @ApiOperation({ summary: 'Get account configuration (OKX only)' })
+  @ApiQuery({
+    name: 'exchange',
+    required: true,
+    enum: ['okx'],
+    example: 'okx',
+  })
+  @ApiResponse({ status: 200, description: 'Account config retrieved successfully' })
+  async getAccountConfig(@Query('exchange') exchange: string) {
+    if (exchange !== 'okx') {
+      throw new Error('Config is only supported for OKX');
+    }
+
+    const service = await this.getFuturesBalanceService('okx', 'perpetual');
+
+    if ('getAccountConfig' in service && typeof service.getAccountConfig === 'function') {
+      return service.getAccountConfig();
+    }
+
+    throw new Error('Config not supported by this service');
+  }
+
+  /**
    * Get account balance
    */
   @Get()
@@ -44,7 +70,7 @@ export class BalanceController {
   @ApiQuery({
     name: 'exchange',
     required: false,
-    enum: ['aster', 'hyperliquid'],
+    enum: ['aster', 'hyperliquid', 'binance', 'okx'],
     example: 'hyperliquid',
   })
   @ApiQuery({
@@ -71,7 +97,7 @@ export class BalanceController {
   @ApiQuery({
     name: 'exchange',
     required: false,
-    enum: ['aster', 'hyperliquid'],
+    enum: ['aster', 'hyperliquid', 'binance', 'okx'],
     example: 'hyperliquid',
   })
   @ApiQuery({
@@ -100,7 +126,7 @@ export class BalanceController {
   @ApiQuery({
     name: 'exchange',
     required: false,
-    enum: ['aster', 'hyperliquid'],
+    enum: ['aster', 'hyperliquid', 'binance', 'okx'],
     example: 'hyperliquid',
   })
   @ApiQuery({
@@ -120,6 +146,41 @@ export class BalanceController {
   }
 
   /**
+   * Transfer funds between accounts (OKX only)
+   */
+  @Post('transfer')
+  @ApiOperation({ summary: 'Transfer funds between accounts (OKX only)' })
+  @ApiQuery({
+    name: 'exchange',
+    required: true,
+    enum: ['okx'],
+    example: 'okx',
+  })
+  @ApiResponse({ status: 200, description: 'Transfer successful' })
+  async transferFunds(
+    @Query('exchange') exchange: string,
+    @Body() body: { ccy: string; amt: number; from?: string; to?: string },
+  ) {
+    if (exchange !== 'okx') {
+      throw new Error('Transfer is only supported for OKX');
+    }
+
+    const service = await this.getFuturesBalanceService('okx', 'perpetual');
+
+    // Check if this is OKX service and has transferFunds method
+    if ('transferFunds' in service && typeof service.transferFunds === 'function') {
+      return service.transferFunds(
+        body.ccy,
+        body.amt,
+        body.from || '6', // Default: Funding account
+        body.to || '18', // Default: Trading account
+      );
+    }
+
+    throw new Error('Transfer not supported by this service');
+  }
+
+  /**
    * Get total unrealized profit/loss
    */
   @Get('pnl/unrealized')
@@ -127,7 +188,7 @@ export class BalanceController {
   @ApiQuery({
     name: 'exchange',
     required: false,
-    enum: ['aster', 'hyperliquid'],
+    enum: ['aster', 'hyperliquid', 'binance', 'okx'],
     example: 'hyperliquid',
   })
   @ApiQuery({
@@ -154,7 +215,7 @@ export class BalanceController {
   @ApiQuery({
     name: 'exchange',
     required: false,
-    enum: ['aster', 'hyperliquid'],
+    enum: ['aster', 'hyperliquid', 'binance', 'okx'],
     example: 'hyperliquid',
   })
   @ApiQuery({
@@ -191,7 +252,7 @@ export class BalanceController {
   @ApiQuery({
     name: 'exchange',
     required: false,
-    enum: ['aster', 'hyperliquid'],
+    enum: ['aster', 'hyperliquid', 'binance', 'okx'],
     example: 'hyperliquid',
   })
   @ApiQuery({
@@ -226,7 +287,7 @@ export class BalanceController {
   @ApiQuery({
     name: 'exchange',
     required: false,
-    enum: ['aster', 'hyperliquid'],
+    enum: ['aster', 'hyperliquid', 'binance', 'okx'],
     example: 'hyperliquid',
   })
   @ApiQuery({
@@ -253,7 +314,7 @@ export class BalanceController {
   @ApiQuery({
     name: 'exchange',
     required: false,
-    enum: ['aster', 'hyperliquid'],
+    enum: ['aster', 'hyperliquid', 'binance', 'okx'],
     example: 'hyperliquid',
   })
   @ApiQuery({
@@ -285,7 +346,7 @@ export class BalanceController {
   @ApiQuery({
     name: 'exchange',
     required: false,
-    enum: ['aster', 'hyperliquid'],
+    enum: ['aster', 'hyperliquid', 'binance', 'okx'],
     example: 'hyperliquid',
   })
   @ApiQuery({
@@ -321,7 +382,7 @@ export class BalanceController {
   @ApiQuery({
     name: 'exchange',
     required: false,
-    enum: ['aster', 'hyperliquid'],
+    enum: ['aster', 'hyperliquid', 'binance', 'okx'],
     example: 'hyperliquid',
   })
   @ApiQuery({

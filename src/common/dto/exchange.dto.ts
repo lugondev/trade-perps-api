@@ -8,13 +8,13 @@ import { ExchangeName, TradingType } from '../types/exchange.types';
 export class ExchangeQueryDto {
   @ApiProperty({
     description: 'Exchange name',
-    enum: ['aster', 'hyperliquid', 'binance', 'orderly'],
+    enum: ['aster', 'hyperliquid', 'binance', 'okx', 'orderly'],
     example: 'hyperliquid',
     required: false,
     default: 'aster',
   })
   @IsOptional()
-  @IsEnum(['aster', 'hyperliquid', 'binance', 'orderly'])
+  @IsEnum(['aster', 'hyperliquid', 'binance', 'okx', 'orderly'])
   exchange?: ExchangeName;
 
   @ApiProperty({

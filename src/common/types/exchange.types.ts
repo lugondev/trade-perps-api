@@ -3,7 +3,7 @@
  * Can be used across all exchanges (Aster, Hyperliquid, Binance, etc.)
  */
 
-export type ExchangeName = 'aster' | 'hyperliquid' | 'binance' | 'orderly';
+export type ExchangeName = 'aster' | 'hyperliquid' | 'binance' | 'okx' | 'orderly';
 export type TradingType = 'perpetual';
 
 export enum OrderSide {

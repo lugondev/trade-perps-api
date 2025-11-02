@@ -5,6 +5,12 @@ export * from './guards/api-key.guard';
 export * from './decorators/public.decorator';
 export * from './decorators/api-key.decorator';
 
+// Services
+export * from './services/symbol-normalizer.service';
+
+// Middleware
+export * from './middleware/symbol-normalizer.middleware';
+
 // Types, Interfaces, DTOs
 export * from './types';
 export * from './interfaces';

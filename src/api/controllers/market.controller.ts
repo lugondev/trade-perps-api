@@ -5,7 +5,7 @@ import { ExchangeServiceFactory } from '../../common/factory/exchange.factory';
 import { ExchangeName, TradingType } from '../../common/types/exchange.types';
 import { IPerpetualMarketService } from '../../common/interfaces';
 
-@ApiTags('� Market API')
+@ApiTags('Market API')
 @ApiKeyAuth()
 @Controller('api/market')
 export class MarketController {
@@ -44,7 +44,7 @@ export class MarketController {
   @ApiQuery({
     name: 'exchange',
     required: false,
-    enum: ['aster', 'hyperliquid'],
+    enum: ['aster', 'hyperliquid', 'binance', 'okx'],
     example: 'hyperliquid',
   })
   @ApiQuery({
@@ -72,7 +72,7 @@ export class MarketController {
   @ApiQuery({
     name: 'exchange',
     required: false,
-    enum: ['aster', 'hyperliquid'],
+    enum: ['aster', 'hyperliquid', 'binance', 'okx'],
     example: 'hyperliquid',
   })
   @ApiQuery({
@@ -99,7 +99,7 @@ export class MarketController {
   @ApiQuery({
     name: 'exchange',
     required: false,
-    enum: ['aster', 'hyperliquid'],
+    enum: ['aster', 'hyperliquid', 'binance', 'okx'],
     example: 'hyperliquid',
   })
   @ApiQuery({
@@ -129,7 +129,7 @@ export class MarketController {
   @ApiQuery({
     name: 'exchange',
     required: false,
-    enum: ['aster', 'hyperliquid'],
+    enum: ['aster', 'hyperliquid', 'binance', 'okx'],
     example: 'hyperliquid',
   })
   @ApiQuery({
@@ -159,7 +159,7 @@ export class MarketController {
   @ApiQuery({
     name: 'exchange',
     required: false,
-    enum: ['aster', 'hyperliquid'],
+    enum: ['aster', 'hyperliquid', 'binance', 'okx'],
     example: 'hyperliquid',
   })
   @ApiQuery({
@@ -195,7 +195,7 @@ export class MarketController {
   @ApiQuery({
     name: 'exchange',
     required: false,
-    enum: ['aster', 'hyperliquid'],
+    enum: ['aster', 'hyperliquid', 'binance', 'okx'],
     example: 'hyperliquid',
   })
   @ApiQuery({
@@ -223,7 +223,7 @@ export class MarketController {
   @ApiQuery({
     name: 'exchange',
     required: false,
-    enum: ['aster', 'hyperliquid'],
+    enum: ['aster', 'hyperliquid', 'binance', 'okx'],
     example: 'hyperliquid',
   })
   @ApiQuery({
@@ -251,7 +251,7 @@ export class MarketController {
   @ApiQuery({
     name: 'exchange',
     required: false,
-    enum: ['aster', 'hyperliquid'],
+    enum: ['aster', 'hyperliquid', 'binance', 'okx'],
     example: 'hyperliquid',
   })
   @ApiQuery({
@@ -285,7 +285,7 @@ export class MarketController {
   @ApiQuery({
     name: 'exchange',
     required: false,
-    enum: ['aster', 'hyperliquid'],
+    enum: ['aster', 'hyperliquid', 'binance', 'okx'],
     example: 'hyperliquid',
   })
   @ApiQuery({
@@ -313,7 +313,7 @@ export class MarketController {
   @ApiQuery({
     name: 'exchange',
     required: false,
-    enum: ['aster', 'hyperliquid'],
+    enum: ['aster', 'hyperliquid', 'binance', 'okx'],
     example: 'hyperliquid',
   })
   @ApiQuery({
@@ -340,7 +340,7 @@ export class MarketController {
   @ApiQuery({
     name: 'exchange',
     required: false,
-    enum: ['aster', 'hyperliquid'],
+    enum: ['aster', 'hyperliquid', 'binance', 'okx'],
     example: 'hyperliquid',
   })
   @ApiQuery({
@@ -368,7 +368,7 @@ export class MarketController {
   @ApiQuery({
     name: 'exchange',
     required: false,
-    enum: ['aster', 'hyperliquid'],
+    enum: ['aster', 'hyperliquid', 'binance', 'okx'],
     example: 'hyperliquid',
   })
   @ApiQuery({
@@ -398,7 +398,7 @@ export class MarketController {
   @ApiQuery({
     name: 'exchange',
     required: false,
-    enum: ['aster', 'hyperliquid'],
+    enum: ['aster', 'hyperliquid', 'binance', 'okx'],
     example: 'hyperliquid',
   })
   @ApiQuery({
@@ -426,7 +426,7 @@ export class MarketController {
   @ApiQuery({
     name: 'exchange',
     required: false,
-    enum: ['aster', 'hyperliquid'],
+    enum: ['aster', 'hyperliquid', 'binance', 'okx'],
     example: 'hyperliquid',
   })
   @ApiQuery({

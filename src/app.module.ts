@@ -3,7 +3,14 @@ import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { appConfig, asterConfig, hyperliquidConfig, tradingConfig } from './config';
+import {
+  appConfig,
+  asterConfig,
+  hyperliquidConfig,
+  binanceConfig,
+  okxConfig,
+  tradingConfig,
+} from './config';
 
 // New architecture modules
 import { CommonModule } from './common/common.module';
@@ -15,7 +22,7 @@ import { ApiModule } from './api/api.module';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
-      load: [appConfig, asterConfig, hyperliquidConfig, tradingConfig],
+      load: [appConfig, asterConfig, hyperliquidConfig, binanceConfig, okxConfig, tradingConfig],
     }),
     ScheduleModule.forRoot(),
 

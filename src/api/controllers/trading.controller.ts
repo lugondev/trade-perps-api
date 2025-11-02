@@ -19,7 +19,7 @@ import {
   QuickLongShortDto,
 } from '../../common/dto/trading.dto';
 
-@ApiTags('🔄 Trading API')
+@ApiTags('Trading API')
 @ApiKeyAuth()
 @Controller('api/trading')
 export class TradingController {
@@ -58,7 +58,7 @@ export class TradingController {
   @ApiQuery({
     name: 'exchange',
     required: false,
-    enum: ['aster', 'hyperliquid'],
+    enum: ['aster', 'hyperliquid', 'binance', 'okx'],
     example: 'hyperliquid',
   })
   @ApiQuery({
@@ -86,7 +86,7 @@ export class TradingController {
   @ApiQuery({
     name: 'exchange',
     required: false,
-    enum: ['aster', 'hyperliquid'],
+    enum: ['aster', 'hyperliquid', 'binance', 'okx'],
     example: 'hyperliquid',
   })
   @ApiQuery({
@@ -114,7 +114,7 @@ export class TradingController {
   @ApiQuery({
     name: 'exchange',
     required: false,
-    enum: ['aster', 'hyperliquid'],
+    enum: ['aster', 'hyperliquid', 'binance', 'okx'],
     example: 'hyperliquid',
   })
   @ApiQuery({
@@ -142,7 +142,7 @@ export class TradingController {
   @ApiQuery({
     name: 'exchange',
     required: false,
-    enum: ['aster', 'hyperliquid'],
+    enum: ['aster', 'hyperliquid', 'binance', 'okx'],
     example: 'hyperliquid',
   })
   @ApiQuery({
@@ -170,7 +170,7 @@ export class TradingController {
   @ApiQuery({
     name: 'exchange',
     required: false,
-    enum: ['aster', 'hyperliquid'],
+    enum: ['aster', 'hyperliquid', 'binance', 'okx'],
     example: 'hyperliquid',
   })
   @ApiQuery({
@@ -199,7 +199,7 @@ export class TradingController {
   @ApiQuery({
     name: 'exchange',
     required: false,
-    enum: ['aster', 'hyperliquid'],
+    enum: ['aster', 'hyperliquid', 'binance', 'okx'],
     example: 'hyperliquid',
   })
   @ApiQuery({
@@ -228,7 +228,7 @@ export class TradingController {
   @ApiQuery({
     name: 'exchange',
     required: false,
-    enum: ['aster', 'hyperliquid'],
+    enum: ['aster', 'hyperliquid', 'binance', 'okx'],
     example: 'hyperliquid',
   })
   @ApiQuery({
@@ -257,7 +257,7 @@ export class TradingController {
   @ApiQuery({
     name: 'exchange',
     required: false,
-    enum: ['aster', 'hyperliquid'],
+    enum: ['aster', 'hyperliquid', 'binance', 'okx'],
     example: 'hyperliquid',
   })
   @ApiQuery({
@@ -286,7 +286,7 @@ export class TradingController {
   @ApiQuery({
     name: 'exchange',
     required: false,
-    enum: ['aster', 'hyperliquid'],
+    enum: ['aster', 'hyperliquid', 'binance', 'okx'],
     example: 'hyperliquid',
   })
   @ApiQuery({
@@ -314,7 +314,7 @@ export class TradingController {
   @ApiQuery({
     name: 'exchange',
     required: false,
-    enum: ['aster', 'hyperliquid'],
+    enum: ['aster', 'hyperliquid', 'binance', 'okx'],
     example: 'hyperliquid',
   })
   @ApiQuery({
@@ -344,7 +344,7 @@ export class TradingController {
   @ApiQuery({
     name: 'exchange',
     required: false,
-    enum: ['aster', 'hyperliquid'],
+    enum: ['aster', 'hyperliquid', 'binance', 'okx'],
     example: 'hyperliquid',
   })
   @ApiQuery({
@@ -372,7 +372,7 @@ export class TradingController {
   @ApiQuery({
     name: 'exchange',
     required: false,
-    enum: ['aster', 'hyperliquid'],
+    enum: ['aster', 'hyperliquid', 'binance', 'okx'],
     example: 'hyperliquid',
   })
   @ApiQuery({
@@ -401,7 +401,7 @@ export class TradingController {
   @ApiQuery({
     name: 'exchange',
     required: false,
-    enum: ['aster', 'hyperliquid'],
+    enum: ['aster', 'hyperliquid', 'binance', 'okx'],
     example: 'hyperliquid',
   })
   @ApiQuery({
@@ -429,7 +429,7 @@ export class TradingController {
   @ApiQuery({
     name: 'exchange',
     required: false,
-    enum: ['aster', 'hyperliquid'],
+    enum: ['aster', 'hyperliquid', 'binance', 'okx'],
     example: 'hyperliquid',
   })
   @ApiQuery({
@@ -457,7 +457,7 @@ export class TradingController {
   @ApiQuery({
     name: 'exchange',
     required: false,
-    enum: ['aster', 'hyperliquid'],
+    enum: ['aster', 'hyperliquid', 'binance', 'okx'],
     example: 'hyperliquid',
   })
   @ApiQuery({
@@ -485,7 +485,7 @@ export class TradingController {
   @ApiQuery({
     name: 'exchange',
     required: false,
-    enum: ['aster', 'hyperliquid'],
+    enum: ['aster', 'hyperliquid', 'binance', 'okx'],
     example: 'hyperliquid',
   })
   @ApiQuery({
@@ -514,7 +514,7 @@ export class TradingController {
   @ApiQuery({
     name: 'exchange',
     required: false,
-    enum: ['aster', 'hyperliquid'],
+    enum: ['aster', 'hyperliquid', 'binance', 'okx'],
     example: 'hyperliquid',
   })
   @ApiQuery({
@@ -548,7 +548,7 @@ export class TradingController {
   @ApiQuery({
     name: 'exchange',
     required: false,
-    enum: ['aster', 'hyperliquid'],
+    enum: ['aster', 'hyperliquid', 'binance', 'okx'],
     example: 'hyperliquid',
   })
   @ApiQuery({
@@ -577,7 +577,7 @@ export class TradingController {
   @ApiQuery({
     name: 'exchange',
     required: false,
-    enum: ['aster', 'hyperliquid'],
+    enum: ['aster', 'hyperliquid', 'binance', 'okx'],
     example: 'hyperliquid',
   })
   @ApiQuery({
@@ -605,7 +605,7 @@ export class TradingController {
   @ApiQuery({
     name: 'exchange',
     required: false,
-    enum: ['aster', 'hyperliquid'],
+    enum: ['aster', 'hyperliquid', 'binance', 'okx'],
     example: 'hyperliquid',
   })
   @ApiQuery({
@@ -633,7 +633,7 @@ export class TradingController {
   @ApiQuery({
     name: 'exchange',
     required: false,
-    enum: ['aster', 'hyperliquid'],
+    enum: ['aster', 'hyperliquid', 'binance', 'okx'],
     example: 'hyperliquid',
   })
   @ApiQuery({
@@ -661,7 +661,7 @@ export class TradingController {
   @ApiQuery({
     name: 'exchange',
     required: false,
-    enum: ['aster', 'hyperliquid'],
+    enum: ['aster', 'hyperliquid', 'binance', 'okx'],
     example: 'hyperliquid',
   })
   @ApiQuery({
@@ -689,7 +689,7 @@ export class TradingController {
   @ApiQuery({
     name: 'exchange',
     required: false,
-    enum: ['aster', 'hyperliquid'],
+    enum: ['aster', 'hyperliquid', 'binance', 'okx'],
     example: 'hyperliquid',
   })
   @ApiQuery({
@@ -717,7 +717,7 @@ export class TradingController {
   @ApiQuery({
     name: 'exchange',
     required: false,
-    enum: ['aster', 'hyperliquid'],
+    enum: ['aster', 'hyperliquid', 'binance', 'okx'],
     example: 'hyperliquid',
   })
   @ApiQuery({
@@ -744,7 +744,7 @@ export class TradingController {
   @ApiQuery({
     name: 'exchange',
     required: false,
-    enum: ['aster', 'hyperliquid'],
+    enum: ['aster', 'hyperliquid', 'binance', 'okx'],
     example: 'hyperliquid',
   })
   @ApiQuery({
@@ -757,16 +757,13 @@ export class TradingController {
   async quickLong(
     @Query('exchange') exchange?: string,
     @Query('tradingType') tradingType?: string,
-    @Query('ntn') ntn?: string,
     @Body() dto?: QuickLongShortDto,
   ) {
     const { exchange: ex, tradingType: tt } = this.getExchangeParams(exchange, tradingType);
     const service = await this.getPerpetualTradingService(ex, tt);
-    // dto fields are required: usdValue, stopLossPercent, takeProfitPercent, leverage
-    const usdValue = ntn ? parseFloat(ntn) : dto!.usdValue;
     return service.quickLong(
       dto!.symbol,
-      usdValue,
+      dto!.usdValue,
       dto!.stopLossPercent,
       dto!.takeProfitPercent,
       dto!.leverage,
@@ -781,7 +778,7 @@ export class TradingController {
   @ApiQuery({
     name: 'exchange',
     required: false,
-    enum: ['aster', 'hyperliquid'],
+    enum: ['aster', 'hyperliquid', 'binance', 'okx'],
     example: 'hyperliquid',
   })
   @ApiQuery({
@@ -794,15 +791,13 @@ export class TradingController {
   async quickShort(
     @Query('exchange') exchange?: string,
     @Query('tradingType') tradingType?: string,
-    @Query('ntn') ntn?: string,
     @Body() dto?: QuickLongShortDto,
   ) {
     const { exchange: ex, tradingType: tt } = this.getExchangeParams(exchange, tradingType);
     const service = await this.getPerpetualTradingService(ex, tt);
-    const usdValue = ntn ? parseFloat(ntn) : dto!.usdValue;
     return service.quickShort(
       dto!.symbol,
-      usdValue,
+      dto!.usdValue,
       dto!.stopLossPercent,
       dto!.takeProfitPercent,
       dto!.leverage,
@@ -817,7 +812,7 @@ export class TradingController {
   @ApiQuery({
     name: 'exchange',
     required: false,
-    enum: ['aster', 'hyperliquid'],
+    enum: ['aster', 'hyperliquid', 'binance', 'okx'],
     example: 'hyperliquid',
   })
   @ApiQuery({

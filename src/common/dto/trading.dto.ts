@@ -3,7 +3,16 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { OrderSide, OrderType, TimeInForce, PositionSide } from '../types/exchange.types';
 
 export class PlaceOrderDto {
-  @ApiProperty({ example: 'BTCUSDT', description: 'Trading symbol' })
+  @ApiProperty({
+    example: 'BTC/USDT',
+    description:
+      'Trading symbol in standard format (BASE/QUOTE).\n' +
+      'Will be automatically converted to exchange-specific format:\n' +
+      '- Binance: BTCUSDT\n' +
+      '- OKX: BTC-USDT-SWAP\n' +
+      '- Aster: PERP_BTC_USDC\n' +
+      '- Hyperliquid: BTC',
+  })
   @IsString()
   symbol: string;
 
@@ -52,7 +61,16 @@ export class PlaceOrderDto {
 }
 
 export class MarketOrderDto {
-  @ApiProperty({ example: 'BTCUSDT', description: 'Trading symbol' })
+  @ApiProperty({
+    example: 'BTC/USDT',
+    description:
+      'Trading symbol in standard format (BASE/QUOTE).\n' +
+      'Will be automatically converted to exchange-specific format:\n' +
+      '- Binance: BTCUSDT\n' +
+      '- OKX: BTC-USDT-SWAP\n' +
+      '- Aster: PERP_BTC_USDC\n' +
+      '- Hyperliquid: BTC',
+  })
   @IsString()
   symbol: string;
 
@@ -75,7 +93,16 @@ export class MarketOrderDto {
 }
 
 export class LimitOrderDto {
-  @ApiProperty({ example: 'BTCUSDT', description: 'Trading symbol' })
+  @ApiProperty({
+    example: 'BTC/USDT',
+    description:
+      'Trading symbol in standard format (BASE/QUOTE).\n' +
+      'Will be automatically converted to exchange-specific format:\n' +
+      '- Binance: BTCUSDT\n' +
+      '- OKX: BTC-USDT-SWAP\n' +
+      '- Aster: PERP_BTC_USDC\n' +
+      '- Hyperliquid: BTC',
+  })
   @IsString()
   symbol: string;
 
